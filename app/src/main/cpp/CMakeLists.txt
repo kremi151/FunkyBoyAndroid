@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# Modifications copyright (C) 2020 Michel Kremer (kremi151)
+#
 
 cmake_minimum_required(VERSION 3.13)
 
@@ -36,7 +38,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall")
 set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
-add_library(fb_android SHARED main.cpp)
+set(SOURCES
+        main.cpp
+        display_android.cpp
+        )
+
+set(HEADERS
+        display_android.h
+        )
+
+add_library(fb_android SHARED ${SOURCES} ${HEADERS})
 
 target_include_directories(fb_android PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue)

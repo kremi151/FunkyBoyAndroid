@@ -34,14 +34,10 @@
 #include <android_native_app_glue.h>
 
 #include <emulator/emulator.h>
+#include "display_android.h"
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "funkyboy", __VA_ARGS__))
 #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "funkyboy", __VA_ARGS__))
-
-jint JNI_OnLoad(JavaVM *, void*) {
-    LOGI("FB JNI CORRECLTY LOADED");
-    return JNI_VERSION_1_6;
-}
 
 /**
  * Shared state for our app.
@@ -355,6 +351,7 @@ void android_main(struct android_app* state) {
     engine.app = state;
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
+    controllers->setDisplay(std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>());
     emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     // Prepare to monitor accelerometer
