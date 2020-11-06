@@ -35,8 +35,13 @@
 
 #include <emulator/emulator.h>
 
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "native-activity", __VA_ARGS__))
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "funkyboy", __VA_ARGS__))
+#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "funkyboy", __VA_ARGS__))
+
+jint JNI_OnLoad(JavaVM *, void*) {
+    LOGI("FB JNI CORRECLTY LOADED");
+    return JNI_VERSION_1_6;
+}
 
 /**
  * Shared state for our app.
@@ -57,6 +62,32 @@ struct engine {
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
+bool pickedRom = false; // TODO: Find a better way
+
+static void requestPickRom(struct engine* engine) {
+    ANativeActivity *nativeActivity = engine->app->activity;
+    JNIEnv *env = nativeActivity->env;
+    JavaVM *jvm = nativeActivity->vm;
+
+    JavaVMAttachArgs vmAttachArgs;
+    vmAttachArgs.version = JNI_VERSION_1_6;
+    vmAttachArgs.name = "FBNativeThread";
+    vmAttachArgs.group = nullptr;
+
+    auto result = jvm->AttachCurrentThread(&env, &vmAttachArgs);
+    if (result == JNI_ERR) {
+        LOGW("Could not attach native thread to JVM");
+        return;
+    }
+
+    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
+    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
+    jmethodID method = env->GetMethodID(nativeActivityClass, "requestPickRom", "()V");
+
+    env->CallVoidMethod(nativeActivityObj, method);
+
+    jvm->DetachCurrentThread();
+}
 
 /**
  * Initialize an EGL context for the current display.
@@ -203,6 +234,9 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
         // TODO: Handle input
         // engine->state.x = AMotionEvent_getX(event, 0);
         // engine->state.y = AMotionEvent_getY(event, 0);
+        if (!pickedRom) {
+            requestPickRom(engine);
+        }
         return 1;
     }
     return 0;
@@ -392,4 +426,15 @@ void android_main(struct android_app* state) {
         }
     }
 }
+
+extern "C" {
+    JNIEXPORT void JNICALL Java_lu_kremi151_funkyboy_FunkyBoyActivity_romPicked(JNIEnv *env, jobject, jstring path) {
+        jboolean isCopy;
+        auto path_cstr = env->GetStringUTFChars(path, &isCopy);
+        auto result = emulator->loadGame(path_cstr);
+        env->ReleaseStringUTFChars(path, path_cstr);
+        LOGI("ROM load status: %d", result);
+    }
+}
+
 //END_INCLUDE(all)

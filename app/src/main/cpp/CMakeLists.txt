@@ -36,16 +36,16 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall")
 set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
-add_library(native-activity SHARED main.cpp)
+add_library(fb_android SHARED main.cpp)
 
-target_include_directories(native-activity PRIVATE
+target_include_directories(fb_android PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue)
 
 add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
 include_directories("${FB_ROOT_DIR}/core/source")
 
 # add lib dependencies
-target_link_libraries(native-activity
+target_link_libraries(fb_android
     android
     native_app_glue
     fb_core
