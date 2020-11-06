@@ -1,0 +1,3 @@
+[submodule "funkyboy"]
+	path = app/src/main/cpp/funkyboy
+	url = https://github.com/kremi151/FunkyBoy.git
