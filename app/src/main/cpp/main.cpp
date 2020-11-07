@@ -25,6 +25,7 @@
 #include <jni.h>
 #include <cerrno>
 #include <cassert>
+#include <cmath>
 
 #include <android/sensor.h>
 #include <android_native_app_glue.h>
@@ -77,8 +78,23 @@ static void requestPickRom(struct engine* engine) {
 }
 
 static int engine_init_display(struct engine* engine) {
-    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(engine->app->window);
-    return 0;
+    ANativeWindow *window = engine->app->window;
+
+    engine->width = ANativeWindow_getWidth(window);
+    engine->height = ANativeWindow_getHeight(window);
+
+    float scale = std::max(((float)FB_GB_DISPLAY_HEIGHT) / ((float)engine->height), ((float)FB_GB_DISPLAY_WIDTH) / ((float)engine->width));
+    int32_t gbWidth = std::ceil(engine->width * scale);
+    int32_t gbHeight = std::ceil(engine->height * scale);
+    int32_t offsetX = (FB_GB_DISPLAY_WIDTH - gbWidth) / 2;
+    int32_t offsetY = (FB_GB_DISPLAY_HEIGHT - gbHeight) / 2;
+
+    auto result = ANativeWindow_setBuffersGeometry(window, gbWidth, gbHeight, WINDOW_FORMAT_RGBA_8888);
+    if (result != 0) {
+        LOGW("Unable to set buffers geometry");
+    }
+    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(window, offsetX, offsetY);
+    return result;
 }
 
 /**
@@ -101,7 +117,7 @@ static void engine_draw_frame(struct engine* engine) {
  * Tear down the EGL context currently associated with the display.
  */
 static void engine_term_display(struct engine* engine) {
-    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(nullptr);
+    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(nullptr, 0, 0);
 }
 
 /**

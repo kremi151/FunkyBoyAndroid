@@ -27,6 +27,8 @@ using namespace FunkyBoy::Controller;
 
 DisplayControllerAndroid::DisplayControllerAndroid()
     : nativeWindow(nullptr)
+    , offsetX(0)
+    , offsetY(0)
     , pixels(new uint32_t[FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT])
 {
 }
@@ -35,8 +37,10 @@ DisplayControllerAndroid::~DisplayControllerAndroid() {
     delete[] pixels;
 }
 
-void DisplayControllerAndroid::setNativeWindow(ANativeWindow *aNativeWindow) {
+void DisplayControllerAndroid::setNativeWindow(ANativeWindow *aNativeWindow, int32_t ox, int32_t oy) {
     nativeWindow = aNativeWindow;
+    offsetX = ox;
+    offsetY = oy;
 }
 
 void DisplayControllerAndroid::drawScanLine(u8 y, u8 *buffer) {

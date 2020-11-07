@@ -28,12 +28,14 @@ namespace FunkyBoy {
         class DisplayControllerAndroid: public DisplayController {
         private:
             ANativeWindow *nativeWindow;
+            int32_t offsetX;
+            int32_t offsetY;
             uint32_t *pixels;
         public:
             DisplayControllerAndroid();
             ~DisplayControllerAndroid() override;
 
-            void setNativeWindow(ANativeWindow *aNativeWindow);
+            void setNativeWindow(ANativeWindow *aNativeWindow, int32_t offsetX, int32_t offsetY);
 
             void drawScanLine(u8 y, u8 *buffer) override;
             void drawScreen() override;
