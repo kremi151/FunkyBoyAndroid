@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Build
+        uses: docker://kremi151/android-ndk:android-29
+        with:
+          entrypoint: ./.github/workflows/scripts/build.sh
+      - name: Change ownership of build directory
+        run: sudo chown -R $(id -u):$(id -g) ${{ github.workspace }}/app/build
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          releaseDirectory: "${{ github.workspace }}/app/build/outputs/apk/release"
+          signingKeyBase64: "${{ secrets.SIGNING_KS }}"
+          alias: "${{ secrets.SIGNING_KEY_ALIAS }}"
+          keyStorePassword: "${{ secrets.SIGNING_KS_PASS }}"
+          keyPassword: "${{ secrets.SIGNING_KEY_PASS }}"
+        id: sign_apk
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: FunkyBoyAndroid
+          path: |
+            ${{ steps.sign_apk.outputs.signedReleaseFile }}

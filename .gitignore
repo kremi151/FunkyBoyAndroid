@@ -3,3 +3,5 @@
 local.properties
 app/.cxx
 app/build
+app/release
+build
