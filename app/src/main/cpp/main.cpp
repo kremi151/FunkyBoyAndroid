@@ -26,18 +26,12 @@
 #include <cerrno>
 #include <cassert>
 
-#include <EGL/egl.h>
-#include <GLES/gl.h>
-
 #include <android/sensor.h>
-#include <android/log.h>
 #include <android_native_app_glue.h>
 
 #include <emulator/emulator.h>
 #include "display_android.h"
-
-#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "funkyboy", __VA_ARGS__))
-#define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, "funkyboy", __VA_ARGS__))
+#include "logging.h"
 
 /**
  * Shared state for our app.
@@ -49,15 +43,12 @@ struct engine {
     const ASensor* accelerometerSensor;
     ASensorEventQueue* sensorEventQueue;
 
-    int animating;
-    EGLDisplay display;
-    EGLSurface surface;
-    EGLContext context;
     int32_t width;
     int32_t height;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
+std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 bool pickedRom = false; // TODO: Find a better way
 
 static void requestPickRom(struct engine* engine) {
@@ -85,99 +76,8 @@ static void requestPickRom(struct engine* engine) {
     jvm->DetachCurrentThread();
 }
 
-/**
- * Initialize an EGL context for the current display.
- */
 static int engine_init_display(struct engine* engine) {
-    // initialize OpenGL ES and EGL
-
-    /*
-     * Here specify the attributes of the desired configuration.
-     * Below, we select an EGLConfig with at least 8 bits per color
-     * component compatible with on-screen windows
-     */
-    const EGLint attribs[] = {
-            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-            EGL_BLUE_SIZE, 8,
-            EGL_GREEN_SIZE, 8,
-            EGL_RED_SIZE, 8,
-            EGL_NONE
-    };
-    EGLint w, h, format;
-    EGLint numConfigs;
-    EGLConfig config = nullptr;
-    EGLSurface surface;
-    EGLContext context;
-
-    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-    eglInitialize(display, nullptr, nullptr);
-
-    /* Here, the application chooses the configuration it desires.
-     * find the best match if possible, otherwise use the very first one
-     */
-    eglChooseConfig(display, attribs, nullptr,0, &numConfigs);
-    std::unique_ptr<EGLConfig[]> supportedConfigs(new EGLConfig[numConfigs]);
-    assert(supportedConfigs);
-    eglChooseConfig(display, attribs, supportedConfigs.get(), numConfigs, &numConfigs);
-    assert(numConfigs);
-    auto i = 0;
-    for (; i < numConfigs; i++) {
-        auto& cfg = supportedConfigs[i];
-        EGLint r, g, b, d;
-        if (eglGetConfigAttrib(display, cfg, EGL_RED_SIZE, &r)   &&
-            eglGetConfigAttrib(display, cfg, EGL_GREEN_SIZE, &g) &&
-            eglGetConfigAttrib(display, cfg, EGL_BLUE_SIZE, &b)  &&
-            eglGetConfigAttrib(display, cfg, EGL_DEPTH_SIZE, &d) &&
-            r == 8 && g == 8 && b == 8 && d == 0 ) {
-
-            config = supportedConfigs[i];
-            break;
-        }
-    }
-    if (i == numConfigs) {
-        config = supportedConfigs[0];
-    }
-
-    if (config == nullptr) {
-        LOGW("Unable to initialize EGLConfig");
-        return -1;
-    }
-
-    /* EGL_NATIVE_VISUAL_ID is an attribute of the EGLConfig that is
-     * guaranteed to be accepted by ANativeWindow_setBuffersGeometry().
-     * As soon as we picked a EGLConfig, we can safely reconfigure the
-     * ANativeWindow buffers to match, using EGL_NATIVE_VISUAL_ID. */
-    eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-    surface = eglCreateWindowSurface(display, config, engine->app->window, nullptr);
-    context = eglCreateContext(display, config, nullptr, nullptr);
-
-    if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
-        LOGW("Unable to eglMakeCurrent");
-        return -1;
-    }
-
-    eglQuerySurface(display, surface, EGL_WIDTH, &w);
-    eglQuerySurface(display, surface, EGL_HEIGHT, &h);
-
-    engine->display = display;
-    engine->context = context;
-    engine->surface = surface;
-    engine->width = w;
-    engine->height = h;
-
-    // Check openGL on the system
-    auto opengl_info = {GL_VENDOR, GL_RENDERER, GL_VERSION, GL_EXTENSIONS};
-    for (auto name : opengl_info) {
-        auto info = glGetString(name);
-        LOGI("OpenGL Info: %s", info);
-    }
-    // Initialize GL state.
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-    glEnable(GL_CULL_FACE);
-    glShadeModel(GL_SMOOTH);
-    glDisable(GL_DEPTH_TEST);
-
+    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(engine->app->window);
     return 0;
 }
 
@@ -185,11 +85,6 @@ static int engine_init_display(struct engine* engine) {
  * Just the current frame in the display.
  */
 static void engine_draw_frame(struct engine* engine) {
-    if (engine->display == nullptr) {
-        // No display.
-        return;
-    }
-
     // Just fill the screen with a color.
 
     // TODO: Draw emulator here
@@ -197,27 +92,16 @@ static void engine_draw_frame(struct engine* engine) {
                  ((float)engine->state.y)/engine->height, 1);
     glClear(GL_COLOR_BUFFER_BIT);*/
 
-    eglSwapBuffers(engine->display, engine->surface);
+    if (pickedRom) {
+        emulator->doTick();
+    }
 }
 
 /**
  * Tear down the EGL context currently associated with the display.
  */
 static void engine_term_display(struct engine* engine) {
-    if (engine->display != EGL_NO_DISPLAY) {
-        eglMakeCurrent(engine->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (engine->context != EGL_NO_CONTEXT) {
-            eglDestroyContext(engine->display, engine->context);
-        }
-        if (engine->surface != EGL_NO_SURFACE) {
-            eglDestroySurface(engine->display, engine->surface);
-        }
-        eglTerminate(engine->display);
-    }
-    engine->animating = 0;
-    engine->display = EGL_NO_DISPLAY;
-    engine->context = EGL_NO_CONTEXT;
-    engine->surface = EGL_NO_SURFACE;
+    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(nullptr);
 }
 
 /**
@@ -226,10 +110,7 @@ static void engine_term_display(struct engine* engine) {
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     auto* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        engine->animating = 1;
         // TODO: Handle input
-        // engine->state.x = AMotionEvent_getX(event, 0);
-        // engine->state.y = AMotionEvent_getY(event, 0);
         if (!pickedRom) {
             requestPickRom(engine);
         }
@@ -280,8 +161,6 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 ASensorEventQueue_disableSensor(engine->sensorEventQueue,
                                                 engine->accelerometerSensor);
             }
-            // Also stop animating.
-            engine->animating = 0;
             engine_draw_frame(engine);
             break;
         default:
@@ -351,7 +230,8 @@ void android_main(struct android_app* state) {
     engine.app = state;
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
-    controllers->setDisplay(std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>());
+    emuDisplayController = std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>();
+    controllers->setDisplay(emuDisplayController);
     emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     // Prepare to monitor accelerometer
@@ -381,7 +261,7 @@ void android_main(struct android_app* state) {
         // If not animating, we will block forever waiting for events.
         // If animating, we loop until all events are read, then continue
         // to draw the next frame of animation.
-        while ((ident=ALooper_pollAll(engine.animating ? 0 : -1, nullptr, &events,
+        while ((ident=ALooper_pollAll(0, nullptr, &events,
                                       (void**)&source)) >= 0) {
 
             // Process this event.
@@ -409,7 +289,7 @@ void android_main(struct android_app* state) {
             }
         }
 
-        if (engine.animating) {
+        if (true /* TODO */) {
             // Done with events; draw next animation frame.
             // TODO: Emulator tick
             /* engine.state.angle += .01f;
@@ -431,6 +311,9 @@ extern "C" {
         auto result = emulator->loadGame(path_cstr);
         env->ReleaseStringUTFChars(path, path_cstr);
         LOGI("ROM load status: %d", result);
+        if (result == FunkyBoy::CartridgeStatus::Loaded) {
+            pickedRom = true;
+        }
     }
 }
 

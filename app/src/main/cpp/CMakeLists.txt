@@ -44,6 +44,7 @@ set(SOURCES
         )
 
 set(HEADERS
+        logging.h
         display_android.h
         )
 
@@ -60,6 +61,4 @@ target_link_libraries(fb_android
     android
     native_app_glue
     fb_core
-    EGL
-    GLESv1_CM
     log)
