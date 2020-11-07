@@ -38,6 +38,13 @@
 #define BITMAP_TYPE_KEY_A 1
 #define BITMAP_TYPE_KEY_B 2
 
+typedef struct {
+    uint x;
+    uint y;
+    uint width;
+    uint height;
+} ui_obj;
+
 /**
  * Shared state for our app.
  */
@@ -54,6 +61,15 @@ struct engine {
 
     int32_t bufferWidth;
     int32_t bufferHeight;
+
+    ui_obj keyUp;
+    ui_obj keyDown;
+    ui_obj keyLeft;
+    ui_obj keyRight;
+    ui_obj keyA;
+    ui_obj keyB;
+
+    float uiScale;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
@@ -124,6 +140,7 @@ static int engine_init_display(struct engine* engine) {
     engine->height = ANativeWindow_getHeight(window);
 
     float scale = std::max(((float)FB_GB_DISPLAY_HEIGHT) / ((float)engine->height), ((float)FB_GB_DISPLAY_WIDTH) / ((float)engine->width));
+    engine->uiScale = scale;
     int32_t bufferWidth = std::ceil(engine->width * scale);
     int32_t bufferHeight = std::ceil(engine->height * scale);
     int32_t offsetX = (FB_GB_DISPLAY_WIDTH - bufferWidth) / 2;
@@ -131,6 +148,38 @@ static int engine_init_display(struct engine* engine) {
 
     engine->bufferWidth = bufferWidth;
     engine->bufferHeight = bufferHeight;
+
+    uint dpadX = 10;
+    uint dpadY = bufferHeight - 60;
+
+    ui_obj uiObjTemplate;
+    uiObjTemplate.x = dpadX + 17;
+    uiObjTemplate.y = dpadY;
+    uiObjTemplate.width = 16;
+    uiObjTemplate.height = 16;
+    engine->keyUp = uiObjTemplate;
+
+    uiObjTemplate.x = dpadX + 17;
+    uiObjTemplate.y = dpadY + 34;
+    engine->keyDown = uiObjTemplate;
+
+    uiObjTemplate.x = dpadX;
+    uiObjTemplate.y = dpadY + 17;
+    engine->keyLeft = uiObjTemplate;
+
+    uiObjTemplate.x = dpadX;
+    uiObjTemplate.y = dpadY + 34;
+    engine->keyRight = uiObjTemplate;
+
+    uiObjTemplate.x = bufferWidth - 30;
+    uiObjTemplate.y = bufferHeight - 60;
+    uiObjTemplate.width = 25;
+    uiObjTemplate.height = 25;
+    engine->keyA = uiObjTemplate;
+
+    uiObjTemplate.x = bufferWidth - 60;
+    uiObjTemplate.y = bufferHeight - 30;
+    engine->keyB = uiObjTemplate;
 
     auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
@@ -185,15 +234,15 @@ static void engine_draw_frame(struct engine* engine) {
 
     if (retCode & FB_RET_NEW_FRAME) {
         jobject bitmap = engine->bitmapDpad;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, 10, engine->bufferHeight - 60) != 0) {
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
             LOGW("Render of DPad failed");
         }
         bitmap = engine->bitmapKeyA;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->bufferWidth - 30, engine->bufferHeight - 60) != 0) {
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyA.x, engine->keyA.y) != 0) {
             LOGW("Render of A key failed");
         }
         bitmap = engine->bitmapKeyB;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->bufferWidth - 60, engine->bufferHeight - 30) != 0) {
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyB.x, engine->keyB.y) != 0) {
             LOGW("Render of B key failed");
         }
         if (ANativeWindow_unlockAndPost(window) < 0) {
