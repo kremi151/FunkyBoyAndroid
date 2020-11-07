@@ -22,7 +22,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Bundle
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
@@ -68,24 +67,20 @@ class FunkyBoyActivity: NativeActivity() {
         }
     }
 
+    private fun loadBitmapFromResources(resId: Int): Bitmap {
+        val options = BitmapFactory.Options()
+        options.inScaled = false
+        return BitmapFactory.decodeResource(resources, resId, options)
+    }
+
     @Suppress("unused") // Used over JNI
     fun loadBitmap(type: Int): Bitmap? {
         return when (type) {
-            0 -> {
-                val options = BitmapFactory.Options()
-                options.inScaled = false
-                BitmapFactory.decodeResource(resources, R.drawable.dpad, options)
-            }
-            1 -> {
-                val options = BitmapFactory.Options()
-                options.inScaled = false
-                BitmapFactory.decodeResource(resources, R.drawable.key_a, options)
-            }
-            2 -> {
-                val options = BitmapFactory.Options()
-                options.inScaled = false
-                BitmapFactory.decodeResource(resources, R.drawable.key_b, options)
-            }
+            0 -> loadBitmapFromResources(R.drawable.dpad)
+            1 -> loadBitmapFromResources(R.drawable.key_a)
+            2 -> loadBitmapFromResources(R.drawable.key_b)
+            3 -> loadBitmapFromResources(R.drawable.key_start)
+            4 -> loadBitmapFromResources(R.drawable.key_select)
             else -> null
         }
     }

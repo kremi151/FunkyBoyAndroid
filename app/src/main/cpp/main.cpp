@@ -32,11 +32,14 @@
 
 #include <emulator/emulator.h>
 #include "display_android.h"
+#include "joypad_android.h"
 #include "logging.h"
 
 #define BITMAP_TYPE_DPAD 0
 #define BITMAP_TYPE_KEY_A 1
 #define BITMAP_TYPE_KEY_B 2
+#define BITMAP_TYPE_KEY_START 3
+#define BITMAP_TYPE_KEY_SELECT 4
 
 typedef struct {
     uint x;
@@ -55,6 +58,8 @@ struct engine {
     jobject bitmapDpad;
     jobject bitmapKeyA;
     jobject bitmapKeyB;
+    jobject bitmapKeyStart;
+    jobject bitmapKeySelect;
 
     int32_t width;
     int32_t height;
@@ -68,12 +73,15 @@ struct engine {
     ui_obj keyRight;
     ui_obj keyA;
     ui_obj keyB;
+    ui_obj keyStart;
+    ui_obj keySelect;
 
     float uiScale;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
+std::shared_ptr<FunkyBoy::Controller::JoypadControllerAndroid> emuJoypadController;
 bool pickedRom = false; // TODO: Find a better way
 
 static void requestPickRom(struct engine* engine) {
@@ -92,9 +100,7 @@ static jobject loadBitmap(struct engine* engine, jint type) {
     JNIEnv *env = engine->env;
 
     jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
-    LOGI("# loadBitmap A %p", nativeActivity->clazz);
     jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    LOGI("# loadBitmap B");
     jmethodID method = env->GetMethodID(nativeActivityClass, "loadBitmap", "(I)Landroid/graphics/Bitmap;");
 
     jobject bitmap = env->CallObjectMethod(nativeActivityObj, method, type);
@@ -150,7 +156,7 @@ static int engine_init_display(struct engine* engine) {
     engine->bufferHeight = bufferHeight;
 
     uint dpadX = 10;
-    uint dpadY = bufferHeight - 60;
+    uint dpadY = bufferHeight - 90;
 
     ui_obj uiObjTemplate;
     uiObjTemplate.x = dpadX + 17;
@@ -167,19 +173,29 @@ static int engine_init_display(struct engine* engine) {
     uiObjTemplate.y = dpadY + 17;
     engine->keyLeft = uiObjTemplate;
 
-    uiObjTemplate.x = dpadX;
-    uiObjTemplate.y = dpadY + 34;
+    uiObjTemplate.x = dpadX + 34;
+    uiObjTemplate.y = dpadY + 17;
     engine->keyRight = uiObjTemplate;
 
     uiObjTemplate.x = bufferWidth - 30;
-    uiObjTemplate.y = bufferHeight - 60;
+    uiObjTemplate.y = bufferHeight - 90;
     uiObjTemplate.width = 25;
     uiObjTemplate.height = 25;
     engine->keyA = uiObjTemplate;
 
     uiObjTemplate.x = bufferWidth - 60;
-    uiObjTemplate.y = bufferHeight - 30;
+    uiObjTemplate.y = bufferHeight - 60;
     engine->keyB = uiObjTemplate;
+
+    uiObjTemplate.width = 25;
+    uiObjTemplate.height = 10;
+    uiObjTemplate.x = (bufferWidth / 2) - 35;
+    uiObjTemplate.y = bufferHeight - 20;
+    engine->keySelect = uiObjTemplate;
+
+    uiObjTemplate.x = (bufferWidth / 2) + 10;
+    uiObjTemplate.y = bufferHeight - 20;
+    engine->keyStart = uiObjTemplate;
 
     auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
@@ -206,6 +222,20 @@ static int engine_init_display(struct engine* engine) {
         engine->bitmapKeyB = bitmap;
     } else {
         LOGW("Unable to load B key bitmap");
+    }
+    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_START);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapKeyStart = bitmap;
+    } else {
+        LOGW("Unable to load start key bitmap");
+    }
+    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_SELECT);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapKeySelect = bitmap;
+    } else {
+        LOGW("Unable to load select key bitmap");
     }
 
     return result;
@@ -245,6 +275,14 @@ static void engine_draw_frame(struct engine* engine) {
         if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyB.x, engine->keyB.y) != 0) {
             LOGW("Render of B key failed");
         }
+        bitmap = engine->bitmapKeyStart;
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyStart.x, engine->keyStart.y) != 0) {
+            LOGW("Render of start key failed");
+        }
+        bitmap = engine->bitmapKeySelect;
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keySelect.x, engine->keySelect.y) != 0) {
+            LOGW("Render of select key failed");
+        }
         if (ANativeWindow_unlockAndPost(window) < 0) {
             LOGW("Unable to unlock and post to native window");
         }
@@ -270,6 +308,19 @@ static void engine_term_display(struct engine* engine) {
         engine->env->DeleteGlobalRef(engine->bitmapKeyB);
         engine->bitmapKeyB = nullptr;
     }
+    if (engine->bitmapKeyStart != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapKeyStart);
+        engine->bitmapKeyStart = nullptr;
+    }
+    if (engine->bitmapKeySelect != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapKeySelect);
+        engine->bitmapKeySelect = nullptr;
+    }
+}
+
+static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
+    return scaledX >= obj.x && scaledX < obj.x + obj.width
+        && scaledY >= obj.y && scaledY < obj.y + obj.height;
 }
 
 /**
@@ -278,9 +329,49 @@ static void engine_term_display(struct engine* engine) {
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     auto* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        // TODO: Handle input
         if (!pickedRom) {
             requestPickRom(engine);
+            return 1;
+        }
+        float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
+        float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
+        auto joypad = dynamic_cast<FunkyBoy::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
+        const bool isUp = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_UP;
+        const bool isDown = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_DOWN;
+        if (!isUp && !isDown) {
+            return 1;
+        }
+        bool touched = isTouched(engine->keyA, scaledX, scaledY);
+        if (touched) {
+            joypad->a = isDown;
+        }
+        touched = isTouched(engine->keyB, scaledX, scaledY);
+        if (touched) {
+            joypad->b = isDown;
+        }
+        touched = isTouched(engine->keyLeft, scaledX, scaledY);
+        if (touched) {
+            joypad->left = isDown;
+        }
+        touched = isTouched(engine->keyUp, scaledX, scaledY);
+        if (touched) {
+            joypad->up = isDown;
+        }
+        touched = isTouched(engine->keyRight, scaledX, scaledY);
+        if (touched) {
+            joypad->right = isDown;
+        }
+        touched = isTouched(engine->keyDown, scaledX, scaledY);
+        if (touched) {
+            joypad->down = isDown;
+        }
+        touched = isTouched(engine->keyStart, scaledX, scaledY);
+        if (touched) {
+            joypad->start = isDown;
+        }
+        touched = isTouched(engine->keySelect, scaledX, scaledY);
+        if (touched) {
+            joypad->select = isDown;
         }
         return 1;
     }
@@ -354,7 +445,9 @@ void android_main(struct android_app* state) {
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     emuDisplayController = std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>();
+    emuJoypadController = std::make_shared<FunkyBoy::Controller::JoypadControllerAndroid>();
     controllers->setDisplay(emuDisplayController);
+    controllers->setJoypad(emuJoypadController);
     emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     if (state->savedState != nullptr) {

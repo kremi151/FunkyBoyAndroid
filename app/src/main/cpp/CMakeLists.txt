@@ -41,11 +41,13 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(SOURCES
         main.cpp
         display_android.cpp
+        joypad_android.cpp
         )
 
 set(HEADERS
         logging.h
         display_android.h
+        joypad_android.h
         )
 
 add_library(fb_android SHARED ${SOURCES} ${HEADERS})
