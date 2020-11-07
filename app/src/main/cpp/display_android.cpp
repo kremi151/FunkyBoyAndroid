@@ -26,9 +26,7 @@
 using namespace FunkyBoy::Controller;
 
 DisplayControllerAndroid::DisplayControllerAndroid()
-    : nativeWindow(nullptr)
-    , offsetX(0)
-    , offsetY(0)
+    : window(nullptr)
     , pixels(new uint32_t[FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT])
 {
 }
@@ -37,10 +35,8 @@ DisplayControllerAndroid::~DisplayControllerAndroid() {
     delete[] pixels;
 }
 
-void DisplayControllerAndroid::setNativeWindow(ANativeWindow *aNativeWindow, int32_t ox, int32_t oy) {
-    nativeWindow = aNativeWindow;
-    offsetX = ox;
-    offsetY = oy;
+void DisplayControllerAndroid::setWindow(ANativeWindow *w) {
+    window = w;
 }
 
 void DisplayControllerAndroid::drawScanLine(u8 y, u8 *buffer) {
@@ -53,14 +49,15 @@ void DisplayControllerAndroid::drawScanLine(u8 y, u8 *buffer) {
 }
 
 void DisplayControllerAndroid::drawScreen() {
-    if (nativeWindow == nullptr) {
+    if (window == nullptr) {
+        // Window is not yet initialized
         return;
     }
-    ANativeWindow_acquire(nativeWindow);
-    ANativeWindow_Buffer buffer;
-    if (ANativeWindow_lock(nativeWindow, &buffer, nullptr) < 0) {
+
+    ANativeWindow_acquire(window);
+    if (ANativeWindow_lock(window, &buffer, nullptr) < 0) {
         LOGW("Unable to lock native window");
-        ANativeWindow_release(nativeWindow);
+        ANativeWindow_release(window);
         return;
     }
     auto *line = (uint32_t *) buffer.bits;
@@ -70,8 +67,7 @@ void DisplayControllerAndroid::drawScreen() {
         }
         line = line + buffer.stride;
     }
-    if (ANativeWindow_unlockAndPost(nativeWindow) < 0) {
-        LOGW("Unable to unlock and post to native window");
-    }
-    ANativeWindow_release(nativeWindow);
+
+    // ANativeWindow_unlockAndPost is called in main.cpp
+    // We listen for FB_RET_NEW_FRAME to call it
 }

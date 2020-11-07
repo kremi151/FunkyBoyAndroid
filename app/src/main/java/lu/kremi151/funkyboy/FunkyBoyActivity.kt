@@ -20,6 +20,9 @@ import android.Manifest
 import android.app.NativeActivity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Bundle
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
@@ -50,6 +53,7 @@ class FunkyBoyActivity: NativeActivity() {
                 .start()
     }
 
+    @Suppress("unused") // Used over JNI
     fun requestPickRom() {
         if (awaitingPickRomResult) {
             return
@@ -61,6 +65,18 @@ class FunkyBoyActivity: NativeActivity() {
                     REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS)
         } else {
             pickRom()
+        }
+    }
+
+    @Suppress("unused") // Used over JNI
+    fun loadBitmap(type: Int): Bitmap? {
+        return when (type) {
+            0 -> {
+                val options = BitmapFactory.Options()
+                options.inScaled = false
+                BitmapFactory.decodeResource(resources, R.drawable.dpad, options)
+            }
+            else -> null
         }
     }
 

@@ -28,19 +28,28 @@
 #include <cmath>
 
 #include <android_native_app_glue.h>
+#include <android/bitmap.h>
 
 #include <emulator/emulator.h>
 #include "display_android.h"
 #include "logging.h"
+
+#define BITMAP_TYPE_DPAD 0
 
 /**
  * Shared state for our app.
  */
 struct engine {
     struct android_app* app;
+    JNIEnv *env;
+
+    jobject bitmapDpad;
 
     int32_t width;
     int32_t height;
+
+    int32_t bufferWidth;
+    int32_t bufferHeight;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
@@ -49,46 +58,89 @@ bool pickedRom = false; // TODO: Find a better way
 
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
-    JNIEnv *env = nativeActivity->env;
-    JavaVM *jvm = nativeActivity->vm;
-
-    JavaVMAttachArgs vmAttachArgs;
-    vmAttachArgs.version = JNI_VERSION_1_6;
-    vmAttachArgs.name = "FBNativeThread";
-    vmAttachArgs.group = nullptr;
-
-    auto result = jvm->AttachCurrentThread(&env, &vmAttachArgs);
-    if (result == JNI_ERR) {
-        LOGW("Could not attach native thread to JVM");
-        return;
-    }
+    JNIEnv *env = engine->env;
 
     jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
     jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
     jmethodID method = env->GetMethodID(nativeActivityClass, "requestPickRom", "()V");
 
     env->CallVoidMethod(nativeActivityObj, method);
+}
 
-    jvm->DetachCurrentThread();
+static jobject loadBitmap(struct engine* engine, jint type) {
+    ANativeActivity *nativeActivity = engine->app->activity;
+    JNIEnv *env = engine->env;
+
+    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
+    LOGI("# loadBitmap A %p", nativeActivity->clazz);
+    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
+    LOGI("# loadBitmap B");
+    jmethodID method = env->GetMethodID(nativeActivityClass, "loadBitmap", "(I)Landroid/graphics/Bitmap;");
+
+    jobject bitmap = env->CallObjectMethod(nativeActivityObj, method, type);
+
+    return bitmap;
+}
+
+static int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, int x, int y) {
+    if (bitmap == nullptr) {
+        return -1;
+    }
+    AndroidBitmapInfo info;
+    if (AndroidBitmap_getInfo(env, bitmap, &info) < 0) {
+        LOGW("Unable to get bitmap info");
+        return -2;
+    }
+    char *data = nullptr;
+    if (AndroidBitmap_lockPixels(env, bitmap, (void **) &data) < 0) {
+        LOGW("Unable to lock pixels");
+        return -3;
+    }
+    if (AndroidBitmap_unlockPixels(env, bitmap) < 0) {
+        LOGW("Unable to unlock pixels");
+        return -4;
+    }
+    auto *bitmapPixes = (int32_t *) data;
+    auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
+    for (int _y = 0; _y < info.height; _y++) {
+        for (int _x = 0; _x < info.width; _x++) {
+            line[x + _x] = bitmapPixes[info.height * _y + _x];
+        }
+        line = line + buffer.stride;
+    }
+    return 0;
 }
 
 static int engine_init_display(struct engine* engine) {
+    LOGI("engine_init_display");
+
     ANativeWindow *window = engine->app->window;
 
     engine->width = ANativeWindow_getWidth(window);
     engine->height = ANativeWindow_getHeight(window);
 
     float scale = std::max(((float)FB_GB_DISPLAY_HEIGHT) / ((float)engine->height), ((float)FB_GB_DISPLAY_WIDTH) / ((float)engine->width));
-    int32_t gbWidth = std::ceil(engine->width * scale);
-    int32_t gbHeight = std::ceil(engine->height * scale);
-    int32_t offsetX = (FB_GB_DISPLAY_WIDTH - gbWidth) / 2;
-    int32_t offsetY = (FB_GB_DISPLAY_HEIGHT - gbHeight) / 2;
+    int32_t bufferWidth = std::ceil(engine->width * scale);
+    int32_t bufferHeight = std::ceil(engine->height * scale);
+    int32_t offsetX = (FB_GB_DISPLAY_WIDTH - bufferWidth) / 2;
+    int32_t offsetY = (FB_GB_DISPLAY_HEIGHT - bufferHeight) / 2;
 
-    auto result = ANativeWindow_setBuffersGeometry(window, gbWidth, gbHeight, WINDOW_FORMAT_RGBA_8888);
+    engine->bufferWidth = bufferWidth;
+    engine->bufferHeight = bufferHeight;
+
+    auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
         LOGW("Unable to set buffers geometry");
     }
-    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(window, offsetX, offsetY);
+
+    jobject bitmapDpad = loadBitmap(engine, BITMAP_TYPE_DPAD);
+    if (bitmapDpad != nullptr) {
+        bitmapDpad = engine->env->NewGlobalRef(bitmapDpad);
+        engine->bitmapDpad = bitmapDpad;
+    } else {
+        LOGW("Unable to load DPad bitmap");
+    }
+
     return result;
 }
 
@@ -103,16 +155,39 @@ static void engine_draw_frame(struct engine* engine) {
                  ((float)engine->state.y)/engine->height, 1);
     glClear(GL_COLOR_BUFFER_BIT);*/
 
+    FunkyBoy::ret_code retCode = 0;
+    ANativeWindow *window = engine->app->window;
+    auto controller = dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
+
     if (pickedRom) {
-        emulator->doTick();
+        controller->setWindow(window);
+        retCode = emulator->doTick();
+        controller->setWindow(nullptr);
     }
+
+    if (retCode & FB_RET_NEW_FRAME) {
+        jobject bitmap = engine->bitmapDpad;
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, 10, engine->bufferHeight - 60) != 0) {
+            LOGW("Render of DPad failed");
+        }
+
+        if (ANativeWindow_unlockAndPost(window) < 0) {
+            LOGW("Unable to unlock and post to native window");
+        }
+        ANativeWindow_release(window);
+    }
+
 }
 
 /**
  * Tear down the EGL context currently associated with the display.
  */
 static void engine_term_display(struct engine* engine) {
-    dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get())->setNativeWindow(nullptr, 0, 0);
+    LOGI("engine_term_display");
+    if (engine->bitmapDpad != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapDpad);
+        engine->bitmapDpad = nullptr;
+    }
 }
 
 /**
@@ -181,6 +256,20 @@ void android_main(struct android_app* state) {
     state->onInputEvent = engine_handle_input;
     engine.app = state;
 
+    JNIEnv *env = state->activity->env;
+    JavaVM *jvm = state->activity->vm;
+
+    JavaVMAttachArgs vmAttachArgs;
+    vmAttachArgs.version = JNI_VERSION_1_6;
+    vmAttachArgs.name = "FBNativeThread";
+    vmAttachArgs.group = nullptr;
+    auto result = jvm->AttachCurrentThread(&env, &vmAttachArgs);
+    if (result == JNI_ERR) {
+        LOGW("Could not attach native thread to JVM");
+        return;
+    }
+    engine.env = env;
+
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     emuDisplayController = std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>();
     controllers->setDisplay(emuDisplayController);
@@ -231,6 +320,8 @@ void android_main(struct android_app* state) {
             engine_draw_frame(&engine);
         }
     }
+
+    jvm->DetachCurrentThread();
 }
 
 extern "C" {

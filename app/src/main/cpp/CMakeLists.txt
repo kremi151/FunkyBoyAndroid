@@ -60,5 +60,6 @@ include_directories("${FB_ROOT_DIR}/core/source")
 target_link_libraries(fb_android
     android
     native_app_glue
+    jnigraphics
     fb_core
     log)
