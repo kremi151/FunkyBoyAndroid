@@ -35,6 +35,8 @@
 #include "logging.h"
 
 #define BITMAP_TYPE_DPAD 0
+#define BITMAP_TYPE_KEY_A 1
+#define BITMAP_TYPE_KEY_B 2
 
 /**
  * Shared state for our app.
@@ -44,6 +46,8 @@ struct engine {
     JNIEnv *env;
 
     jobject bitmapDpad;
+    jobject bitmapKeyA;
+    jobject bitmapKeyB;
 
     int32_t width;
     int32_t height;
@@ -133,12 +137,26 @@ static int engine_init_display(struct engine* engine) {
         LOGW("Unable to set buffers geometry");
     }
 
-    jobject bitmapDpad = loadBitmap(engine, BITMAP_TYPE_DPAD);
-    if (bitmapDpad != nullptr) {
-        bitmapDpad = engine->env->NewGlobalRef(bitmapDpad);
-        engine->bitmapDpad = bitmapDpad;
+    jobject bitmap = loadBitmap(engine, BITMAP_TYPE_DPAD);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapDpad = bitmap;
     } else {
         LOGW("Unable to load DPad bitmap");
+    }
+    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_A);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapKeyA = bitmap;
+    } else {
+        LOGW("Unable to load A key bitmap");
+    }
+    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_B);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapKeyB = bitmap;
+    } else {
+        LOGW("Unable to load B key bitmap");
     }
 
     return result;
@@ -170,7 +188,14 @@ static void engine_draw_frame(struct engine* engine) {
         if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, 10, engine->bufferHeight - 60) != 0) {
             LOGW("Render of DPad failed");
         }
-
+        bitmap = engine->bitmapKeyA;
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->bufferWidth - 30, engine->bufferHeight - 60) != 0) {
+            LOGW("Render of A key failed");
+        }
+        bitmap = engine->bitmapKeyB;
+        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->bufferWidth - 60, engine->bufferHeight - 30) != 0) {
+            LOGW("Render of B key failed");
+        }
         if (ANativeWindow_unlockAndPost(window) < 0) {
             LOGW("Unable to unlock and post to native window");
         }
@@ -187,6 +212,14 @@ static void engine_term_display(struct engine* engine) {
     if (engine->bitmapDpad != nullptr) {
         engine->env->DeleteGlobalRef(engine->bitmapDpad);
         engine->bitmapDpad = nullptr;
+    }
+    if (engine->bitmapKeyA != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapKeyA);
+        engine->bitmapKeyA = nullptr;
+    }
+    if (engine->bitmapKeyB != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapKeyB);
+        engine->bitmapKeyB = nullptr;
     }
 }
 

@@ -76,6 +76,16 @@ class FunkyBoyActivity: NativeActivity() {
                 options.inScaled = false
                 BitmapFactory.decodeResource(resources, R.drawable.dpad, options)
             }
+            1 -> {
+                val options = BitmapFactory.Options()
+                options.inScaled = false
+                BitmapFactory.decodeResource(resources, R.drawable.key_a, options)
+            }
+            2 -> {
+                val options = BitmapFactory.Options()
+                options.inScaled = false
+                BitmapFactory.decodeResource(resources, R.drawable.key_b, options)
+            }
             else -> null
         }
     }
