@@ -28,7 +28,7 @@ namespace FunkyBoy {
         class DisplayControllerAndroid: public DisplayController {
         private:
             ANativeWindow *window;
-            ANativeWindow_Buffer buffer;
+            ANativeWindow_Buffer buffer{};
             uint32_t *pixels;
             bool windowAcquired;
         public:

@@ -318,6 +318,43 @@ static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
         && scaledY >= obj.y && scaledY < obj.y + obj.height;
 }
 
+static void handleInputPointer(int index, AInputEvent* event, bool isDown, struct engine *engine, FunkyBoy::Controller::JoypadControllerAndroid &joypad) {
+    float scaledX = AMotionEvent_getX(event, index) * engine->uiScale;
+    float scaledY = AMotionEvent_getY(event, index) * engine->uiScale;
+    bool touched = isTouched(engine->keyA, scaledX, scaledY);
+    if (touched) {
+        joypad.a = isDown;
+    }
+    touched = isTouched(engine->keyB, scaledX, scaledY);
+    if (touched) {
+        joypad.b = isDown;
+    }
+    touched = isTouched(engine->keyLeft, scaledX, scaledY);
+    if (touched) {
+        joypad.left = isDown;
+    }
+    touched = isTouched(engine->keyUp, scaledX, scaledY);
+    if (touched) {
+        joypad.up = isDown;
+    }
+    touched = isTouched(engine->keyRight, scaledX, scaledY);
+    if (touched) {
+        joypad.right = isDown;
+    }
+    touched = isTouched(engine->keyDown, scaledX, scaledY);
+    if (touched) {
+        joypad.down = isDown;
+    }
+    touched = isTouched(engine->keyStart, scaledX, scaledY);
+    if (touched) {
+        joypad.start = isDown;
+    }
+    touched = isTouched(engine->keySelect, scaledX, scaledY);
+    if (touched) {
+        joypad.select = isDown;
+    }
+}
+
 /**
  * Process the next input event.
  */
@@ -328,45 +365,15 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
             requestPickRom(engine);
             return 1;
         }
-        float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
-        float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
+        int pointerCount = AMotionEvent_getPointerCount(event);
         auto joypad = dynamic_cast<FunkyBoy::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
         const bool isUp = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_UP;
         const bool isDown = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_DOWN;
         if (!isUp && !isDown) {
             return 1;
         }
-        bool touched = isTouched(engine->keyA, scaledX, scaledY);
-        if (touched) {
-            joypad->a = isDown;
-        }
-        touched = isTouched(engine->keyB, scaledX, scaledY);
-        if (touched) {
-            joypad->b = isDown;
-        }
-        touched = isTouched(engine->keyLeft, scaledX, scaledY);
-        if (touched) {
-            joypad->left = isDown;
-        }
-        touched = isTouched(engine->keyUp, scaledX, scaledY);
-        if (touched) {
-            joypad->up = isDown;
-        }
-        touched = isTouched(engine->keyRight, scaledX, scaledY);
-        if (touched) {
-            joypad->right = isDown;
-        }
-        touched = isTouched(engine->keyDown, scaledX, scaledY);
-        if (touched) {
-            joypad->down = isDown;
-        }
-        touched = isTouched(engine->keyStart, scaledX, scaledY);
-        if (touched) {
-            joypad->start = isDown;
-        }
-        touched = isTouched(engine->keySelect, scaledX, scaledY);
-        if (touched) {
-            joypad->select = isDown;
+        for (pointerCount = pointerCount - 1 ; pointerCount >= 0 ; pointerCount--) {
+            handleInputPointer(pointerCount, event, isDown, engine, *joypad);
         }
         return 1;
     }
