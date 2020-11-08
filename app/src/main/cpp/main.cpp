@@ -82,7 +82,6 @@ struct engine {
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 std::shared_ptr<FunkyBoy::Controller::JoypadControllerAndroid> emuJoypadController;
-bool pickedRom = false; // TODO: Find a better way
 
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -256,7 +255,7 @@ static void engine_draw_frame(struct engine* engine) {
     ANativeWindow *window = engine->app->window;
     auto controller = dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
-    if (pickedRom) {
+    if (emulator->getCartridge().getStatus() == FunkyBoy::CartridgeStatus::Loaded) {
         controller->setWindow(window);
         retCode = emulator->doTick();
         controller->setWindow(nullptr);
@@ -329,7 +328,7 @@ static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
     auto* engine = (struct engine*)app->userData;
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        if (!pickedRom) {
+        if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
             requestPickRom(engine);
             return 1;
         }
@@ -506,9 +505,6 @@ extern "C" {
         auto result = emulator->loadGame(path_cstr);
         env->ReleaseStringUTFChars(path, path_cstr);
         LOGI("ROM load status: %d", result);
-        if (result == FunkyBoy::CartridgeStatus::Loaded) {
-            pickedRom = true;
-        }
     }
 }
 
