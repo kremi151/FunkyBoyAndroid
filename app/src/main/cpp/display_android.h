@@ -30,6 +30,7 @@ namespace FunkyBoy {
             ANativeWindow *window;
             ANativeWindow_Buffer buffer;
             uint32_t *pixels;
+            bool windowAcquired;
         public:
             DisplayControllerAndroid();
             ~DisplayControllerAndroid() override;
@@ -38,6 +39,10 @@ namespace FunkyBoy {
 
             void drawScanLine(u8 y, u8 *buffer) override;
             void drawScreen() override;
+
+            bool wasWindowAcquired() {
+                return windowAcquired;
+            }
 
             ANativeWindow_Buffer &getBuffer() {
                 return buffer;

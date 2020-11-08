@@ -28,6 +28,7 @@ using namespace FunkyBoy::Controller;
 DisplayControllerAndroid::DisplayControllerAndroid()
     : window(nullptr)
     , pixels(new uint32_t[FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT])
+    , windowAcquired(false)
 {
 }
 
@@ -57,9 +58,11 @@ void DisplayControllerAndroid::drawScreen() {
     ANativeWindow_acquire(window);
     if (ANativeWindow_lock(window, &buffer, nullptr) < 0) {
         LOGW("Unable to lock native window");
+        windowAcquired = false;
         ANativeWindow_release(window);
         return;
     }
+    windowAcquired = true;
     auto *line = (uint32_t *) buffer.bits;
     for (int y = 0 ; y < FB_GB_DISPLAY_HEIGHT ; y++) {
         for (int x = 0 ; x < FB_GB_DISPLAY_WIDTH ; x++) {

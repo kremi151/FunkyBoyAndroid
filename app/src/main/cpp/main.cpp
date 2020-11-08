@@ -77,6 +77,8 @@ struct engine {
     ui_obj keySelect;
 
     float uiScale;
+
+    bool animating;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
@@ -137,7 +139,7 @@ static int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap,
 }
 
 static int engine_init_display(struct engine* engine) {
-    LOGI("engine_init_display");
+    LOGD("engine_init_display");
 
     ANativeWindow *window = engine->app->window;
 
@@ -244,13 +246,6 @@ static int engine_init_display(struct engine* engine) {
  * Just the current frame in the display.
  */
 static void engine_draw_frame(struct engine* engine) {
-    // Just fill the screen with a color.
-
-    // TODO: Draw emulator here
-    /*glClearColor(((float)engine->state.x)/engine->width, engine->state.angle,
-                 ((float)engine->state.y)/engine->height, 1);
-    glClear(GL_COLOR_BUFFER_BIT);*/
-
     FunkyBoy::ret_code retCode = 0;
     ANativeWindow *window = engine->app->window;
     auto controller = dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
@@ -261,7 +256,7 @@ static void engine_draw_frame(struct engine* engine) {
         controller->setWindow(nullptr);
     }
 
-    if (retCode & FB_RET_NEW_FRAME) {
+    if (retCode & FB_RET_NEW_FRAME && controller->wasWindowAcquired()) {
         jobject bitmap = engine->bitmapDpad;
         if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
             LOGW("Render of DPad failed");
@@ -294,7 +289,7 @@ static void engine_draw_frame(struct engine* engine) {
  * Tear down the EGL context currently associated with the display.
  */
 static void engine_term_display(struct engine* engine) {
-    LOGI("engine_term_display");
+    LOGD("engine_term_display");
     if (engine->bitmapDpad != nullptr) {
         engine->env->DeleteGlobalRef(engine->bitmapDpad);
         engine->bitmapDpad = nullptr;
@@ -315,6 +310,7 @@ static void engine_term_display(struct engine* engine) {
         engine->env->DeleteGlobalRef(engine->bitmapKeySelect);
         engine->bitmapKeySelect = nullptr;
     }
+    engine->animating = false;
 }
 
 static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
@@ -384,6 +380,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     auto* engine = (struct engine*)app->userData;
     switch (cmd) {
         case APP_CMD_SAVE_STATE:
+            LOGD("CMD: APP_CMD_SAVE_STATE");
             // The system has asked us to save our current state.  Do so.
             // TODO: Save state
             /* engine->app->savedState = malloc(sizeof(struct saved_state));
@@ -392,21 +389,25 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             break;
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
+            LOGD("CMD: APP_CMD_INIT_WINDOW");
             if (engine->app->window != nullptr) {
                 engine_init_display(engine);
                 engine_draw_frame(engine);
             }
             break;
         case APP_CMD_TERM_WINDOW:
+            LOGD("CMD: APP_CMD_TERM_WINDOW");
             // The window is being hidden or closed, clean it up.
             engine_term_display(engine);
             break;
         case APP_CMD_GAINED_FOCUS:
-            // When our app gains focus, we start monitoring the accelerometer.
+            LOGD("CMD: APP_CMD_GAINED_FOCUS");
+            // When our app gains focus, we start animating again.
+            engine->animating = true;
             break;
         case APP_CMD_LOST_FOCUS:
-            // When our app loses focus, we stop monitoring the accelerometer.
-            // This is to avoid consuming battery while not being used.
+            LOGD("CMD: APP_CMD_LOST_FOCUS");
+            engine->animating = false;
             engine_draw_frame(engine);
             break;
         default:
@@ -466,7 +467,7 @@ void android_main(struct android_app* state) {
         // If not animating, we will block forever waiting for events.
         // If animating, we loop until all events are read, then continue
         // to draw the next frame of animation.
-        while ((ident=ALooper_pollAll(0, nullptr, &events,
+        while ((ident=ALooper_pollAll(engine.animating ? 0 : -1, nullptr, &events,
                                       (void**)&source)) >= 0) {
 
             // Process this event.
@@ -481,7 +482,7 @@ void android_main(struct android_app* state) {
             }
         }
 
-        if (true /* TODO */) {
+        if (engine.animating) {
             // Done with events; draw next animation frame.
             // TODO: Emulator tick
             /* engine.state.angle += .01f;
@@ -504,7 +505,7 @@ extern "C" {
         auto path_cstr = env->GetStringUTFChars(path, &isCopy);
         auto result = emulator->loadGame(path_cstr);
         env->ReleaseStringUTFChars(path, path_cstr);
-        LOGI("ROM load status: %d", result);
+        LOGD("ROM load status: %d", result);
     }
 }
 
