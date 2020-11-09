@@ -26,6 +26,8 @@
 #include <cerrno>
 #include <cassert>
 #include <cmath>
+#include <vector>
+#include <algorithm>
 
 #include <android_native_app_glue.h>
 #include <android/bitmap.h>
@@ -79,6 +81,8 @@ struct engine {
     float uiScale;
 
     bool animating;
+
+    std::vector<size_t> activePointerIds;
 };
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
@@ -318,66 +322,117 @@ static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
         && scaledY >= obj.y && scaledY < obj.y + obj.height;
 }
 
-static void handleInputPointer(int index, AInputEvent* event, bool isDown, struct engine *engine, FunkyBoy::Controller::JoypadControllerAndroid &joypad) {
+static void handleInputPointer(int index, AInputEvent* event, struct engine *engine, FunkyBoy::Controller::JoypadControllerAndroid &joypad) {
     float scaledX = AMotionEvent_getX(event, index) * engine->uiScale;
     float scaledY = AMotionEvent_getY(event, index) * engine->uiScale;
     bool touched = isTouched(engine->keyA, scaledX, scaledY);
     if (touched) {
-        joypad.a = isDown;
+        joypad.a = true;
     }
     touched = isTouched(engine->keyB, scaledX, scaledY);
     if (touched) {
-        joypad.b = isDown;
+        joypad.b = true;
     }
     touched = isTouched(engine->keyLeft, scaledX, scaledY);
     if (touched) {
-        joypad.left = isDown;
+        joypad.left = true;
     }
     touched = isTouched(engine->keyUp, scaledX, scaledY);
     if (touched) {
-        joypad.up = isDown;
+        joypad.up = true;
     }
     touched = isTouched(engine->keyRight, scaledX, scaledY);
     if (touched) {
-        joypad.right = isDown;
+        joypad.right = true;
     }
     touched = isTouched(engine->keyDown, scaledX, scaledY);
     if (touched) {
-        joypad.down = isDown;
+        joypad.down = true;
     }
     touched = isTouched(engine->keyStart, scaledX, scaledY);
     if (touched) {
-        joypad.start = isDown;
+        joypad.start = true;
     }
     touched = isTouched(engine->keySelect, scaledX, scaledY);
     if (touched) {
-        joypad.select = isDown;
+        joypad.select = true;
     }
+}
+
+static int findPointerIndex(const AInputEvent* event, size_t id) {
+    int count = AMotionEvent_getPointerCount(event);
+    for (int i = 0; i < count; i++) {
+        if (id == AMotionEvent_getPointerId(event, i)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 /**
  * Process the next input event.
  */
 static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) {
+    if (AInputEvent_getType(event) != AINPUT_EVENT_TYPE_MOTION) {
+        return 0;
+    }
     auto* engine = (struct engine*)app->userData;
-    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION) {
-        if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
-            requestPickRom(engine);
-            return 1;
-        }
-        int pointerCount = AMotionEvent_getPointerCount(event);
-        auto joypad = dynamic_cast<FunkyBoy::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
-        const bool isUp = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_UP;
-        const bool isDown = (AMOTION_EVENT_ACTION_MASK & AMotionEvent_getAction(event)) == AMOTION_EVENT_ACTION_DOWN;
-        if (!isUp && !isDown) {
-            return 1;
-        }
-        for (pointerCount = pointerCount - 1 ; pointerCount >= 0 ; pointerCount--) {
-            handleInputPointer(pointerCount, event, isDown, engine, *joypad);
-        }
+    if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+        requestPickRom(engine);
         return 1;
     }
-    return 0;
+    int action = AMotionEvent_getAction(event);
+    uint flags = action & AMOTION_EVENT_ACTION_MASK;
+    auto &activePointerIds = engine->activePointerIds;
+    switch (flags) {
+        case AMOTION_EVENT_ACTION_DOWN:
+            // For AMOTION_EVENT_ACTION_DOWN, only the primary pointer is involved
+            activePointerIds.push_back(AMotionEvent_getPointerId(event, 0));
+            break;
+        case AMOTION_EVENT_ACTION_POINTER_DOWN: {
+            uint32_t pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+            activePointerIds.push_back(AMotionEvent_getPointerId(event, pointerIndex));
+            break;
+        }
+        case AMOTION_EVENT_ACTION_UP:
+            // FILO: First in, last out (primary pointer)
+            activePointerIds.pop_back();
+            break;
+        case AMOTION_EVENT_ACTION_POINTER_INDEX_MASK: {
+            uint pointerId = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+            pointerId = AMotionEvent_getPointerId(event, pointerId);
+            auto it = activePointerIds.begin();
+            auto it_end = activePointerIds.end();
+            for (; it != it_end; ++it) {
+                if (*it == pointerId) {
+                    activePointerIds.erase(it);
+                    break;
+                }
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    auto &joypad = *dynamic_cast<FunkyBoy::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
+
+    joypad.a = false;
+    joypad.b = false;
+    joypad.start = false;
+    joypad.select = false;
+    joypad.left = false;
+    joypad.up = false;
+    joypad.right = false;
+    joypad.down = false;
+
+    auto it = activePointerIds.begin();
+    auto it_end = activePointerIds.end();
+    for (; it != it_end; ++it) {
+        auto pointerIndex = findPointerIndex(event, *it);
+        handleInputPointer(pointerIndex, event, engine, joypad);
+    }
+    return 1;
 }
 
 /**
@@ -397,6 +452,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
             LOGD("CMD: APP_CMD_INIT_WINDOW");
+            engine->activePointerIds.clear();
             if (engine->app->window != nullptr) {
                 engine_init_display(engine);
                 engine_draw_frame(engine);
@@ -404,16 +460,19 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             break;
         case APP_CMD_TERM_WINDOW:
             LOGD("CMD: APP_CMD_TERM_WINDOW");
+            engine->activePointerIds.clear();
             // The window is being hidden or closed, clean it up.
             engine_term_display(engine);
             break;
         case APP_CMD_GAINED_FOCUS:
             LOGD("CMD: APP_CMD_GAINED_FOCUS");
+            engine->activePointerIds.clear();
             // When our app gains focus, we start animating again.
             engine->animating = true;
             break;
         case APP_CMD_LOST_FOCUS:
             LOGD("CMD: APP_CMD_LOST_FOCUS");
+            engine->activePointerIds.clear();
             engine->animating = false;
             engine_draw_frame(engine);
             break;
