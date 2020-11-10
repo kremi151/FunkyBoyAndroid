@@ -398,7 +398,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
             // FILO: First in, last out (primary pointer)
             activePointerIds.pop_back();
             break;
-        case AMOTION_EVENT_ACTION_POINTER_INDEX_MASK: {
+        case AMOTION_EVENT_ACTION_POINTER_UP: {
             uint pointerId = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
             pointerId = AMotionEvent_getPointerId(event, pointerId);
             auto it = activePointerIds.begin();
@@ -430,7 +430,9 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     auto it_end = activePointerIds.end();
     for (; it != it_end; ++it) {
         auto pointerIndex = findPointerIndex(event, *it);
-        handleInputPointer(pointerIndex, event, engine, joypad);
+        if (pointerIndex != -1) {
+            handleInputPointer(pointerIndex, event, engine, joypad);
+        }
     }
     return 1;
 }
