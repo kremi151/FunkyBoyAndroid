@@ -33,6 +33,7 @@
 #include <android/bitmap.h>
 
 #include <emulator/emulator.h>
+#include <unistd.h>
 #include "display_android.h"
 #include "joypad_android.h"
 #include "logging.h"
@@ -84,6 +85,8 @@ struct engine {
 
     std::vector<size_t> activePointerIds;
 };
+
+static int msgPipe[2];
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
@@ -483,6 +486,25 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     }
 }
 
+static int handleCustomMessage(int fd, int events, void* data) {
+    char strlnChars[4];
+    read(fd, strlnChars, 4);
+
+    size_t strln = (strlnChars[0] << 24) | (strlnChars[1] << 16) | (strlnChars[2] << 8) | strlnChars[3];
+
+    char *romPath = (char*) calloc(strln + 1, sizeof(char));
+    read(fd, romPath, strln);
+
+    LOGD("RECV rom path: %s", romPath);
+
+    auto result = emulator->loadGame(romPath);
+
+    LOGD("ROM load status: %d", result);
+
+    free(romPath);
+    return 1;
+}
+
 /**
  * This is the main entry point of a native application that is using
  * android_native_app_glue.  It runs in its own thread, with its own
@@ -523,6 +545,9 @@ void android_main(struct android_app* state) {
         // TODO: Restore state
         // engine.state = *(struct saved_state*)state->savedState;
     }
+
+    pipe(msgPipe);
+    ALooper_addFd(state->looper, msgPipe[0], ALOOPER_POLL_CALLBACK , ALOOPER_EVENT_INPUT, handleCustomMessage, state);
 
     // loop waiting for stuff to do.
 
@@ -571,9 +596,18 @@ extern "C" {
     JNIEXPORT void JNICALL Java_lu_kremi151_funkyboy_FunkyBoyActivity_romPicked(JNIEnv *env, jobject, jstring path) {
         jboolean isCopy;
         auto path_cstr = env->GetStringUTFChars(path, &isCopy);
-        auto result = emulator->loadGame(path_cstr);
+
+        size_t strln = strlen(path_cstr);
+        char strlnChars[4];
+        strlnChars[0] = (strln >> 24) & 0xff;
+        strlnChars[1] = (strln >> 16) & 0xff;
+        strlnChars[2] = (strln >> 8) & 0xff;
+        strlnChars[3] = strln & 0xff;
+
+        write(msgPipe[1], strlnChars, 4);
+        write(msgPipe[1], path_cstr, strln);
+
         env->ReleaseStringUTFChars(path, path_cstr);
-        LOGD("ROM load status: %d", result);
     }
 }
 
