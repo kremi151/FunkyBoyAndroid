@@ -249,6 +249,29 @@ static int engine_init_display(struct engine* engine) {
     return result;
 }
 
+static void drawControls(struct engine* engine, ANativeWindow_Buffer &buffer) {
+    jobject bitmap = engine->bitmapDpad;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
+        LOGW("Render of DPad failed");
+    }
+    bitmap = engine->bitmapKeyA;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyA.x, engine->keyA.y) != 0) {
+        LOGW("Render of A key failed");
+    }
+    bitmap = engine->bitmapKeyB;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyB.x, engine->keyB.y) != 0) {
+        LOGW("Render of B key failed");
+    }
+    bitmap = engine->bitmapKeyStart;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyStart.x, engine->keyStart.y) != 0) {
+        LOGW("Render of start key failed");
+    }
+    bitmap = engine->bitmapKeySelect;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keySelect.x, engine->keySelect.y) != 0) {
+        LOGW("Render of select key failed");
+    }
+}
+
 /**
  * Just the current frame in the display.
  */
@@ -264,26 +287,7 @@ static void engine_draw_frame(struct engine* engine) {
     }
 
     if (retCode & FB_RET_NEW_FRAME && controller->wasWindowAcquired()) {
-        jobject bitmap = engine->bitmapDpad;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
-            LOGW("Render of DPad failed");
-        }
-        bitmap = engine->bitmapKeyA;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyA.x, engine->keyA.y) != 0) {
-            LOGW("Render of A key failed");
-        }
-        bitmap = engine->bitmapKeyB;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyB.x, engine->keyB.y) != 0) {
-            LOGW("Render of B key failed");
-        }
-        bitmap = engine->bitmapKeyStart;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keyStart.x, engine->keyStart.y) != 0) {
-            LOGW("Render of start key failed");
-        }
-        bitmap = engine->bitmapKeySelect;
-        if (bitmap != nullptr && drawBitmap(engine->env, controller->getBuffer(), bitmap, engine->keySelect.x, engine->keySelect.y) != 0) {
-            LOGW("Render of select key failed");
-        }
+        drawControls(engine, controller->getBuffer());
         if (ANativeWindow_unlockAndPost(window) < 0) {
             LOGW("Unable to unlock and post to native window");
         }
