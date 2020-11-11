@@ -399,10 +399,8 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 }
 
 static int handleCustomMessage(int fd, int events, void* data) {
-    char strlnChars[4];
-    read(fd, strlnChars, 4);
-
-    size_t strln = (strlnChars[0] << 24) | (strlnChars[1] << 16) | (strlnChars[2] << 8) | strlnChars[3];
+    size_t strln;
+    read(fd, reinterpret_cast<char *>(&strln), sizeof(size_t));
 
     char *romPath = (char*) calloc(strln + 1, sizeof(char));
     read(fd, romPath, strln);
@@ -510,13 +508,8 @@ extern "C" {
         auto path_cstr = env->GetStringUTFChars(path, &isCopy);
 
         size_t strln = strlen(path_cstr);
-        char strlnChars[4];
-        strlnChars[0] = (strln >> 24) & 0xff;
-        strlnChars[1] = (strln >> 16) & 0xff;
-        strlnChars[2] = (strln >> 8) & 0xff;
-        strlnChars[3] = strln & 0xff;
 
-        write(msgPipe[1], strlnChars, 4);
+        write(msgPipe[1], reinterpret_cast<char *>(&strln), sizeof(size_t));
         write(msgPipe[1], path_cstr, strln);
 
         env->ReleaseStringUTFChars(path, path_cstr);
