@@ -39,15 +39,15 @@ set(CMAKE_SHARED_LINKER_FLAGS
     "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
 set(SOURCES
-        main.cpp
-        display_android.cpp
-        joypad_android.cpp
+        source/main.cpp
+        source/controllers/display_android.cpp
+        source/controllers/joypad_android.cpp
         )
 
 set(HEADERS
-        logging.h
-        display_android.h
-        joypad_android.h
+        source/fba_util/logging.h
+        source/controllers/display_android.h
+        source/controllers/joypad_android.h
         )
 
 add_library(fb_android SHARED ${SOURCES} ${HEADERS})
@@ -57,6 +57,7 @@ target_include_directories(fb_android PRIVATE
 
 add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
 include_directories("${FB_ROOT_DIR}/core/source")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/source")
 
 # add lib dependencies
 target_link_libraries(fb_android

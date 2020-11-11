@@ -21,7 +21,7 @@
 #include <android/native_window_jni.h>
 #include <palette/dmg_palette.h>
 
-#include "logging.h"
+#include <fba_util/logging.h>
 
 using namespace FunkyBoy::Controller;
 

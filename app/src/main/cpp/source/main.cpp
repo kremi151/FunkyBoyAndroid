@@ -34,9 +34,9 @@
 
 #include <emulator/emulator.h>
 #include <unistd.h>
-#include "display_android.h"
-#include "joypad_android.h"
-#include "logging.h"
+#include <controllers/display_android.h>
+#include <controllers/joypad_android.h>
+#include <fba_util/logging.h>
 
 #define BITMAP_TYPE_DPAD 0
 #define BITMAP_TYPE_KEY_A 1
