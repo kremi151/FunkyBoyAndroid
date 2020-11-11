@@ -46,6 +46,8 @@ set(SOURCES
 
 set(HEADERS
         source/fba_util/logging.h
+        source/state/engine.h
+        source/state/ui_obj.h
         source/controllers/display_android.h
         source/controllers/joypad_android.h
         )

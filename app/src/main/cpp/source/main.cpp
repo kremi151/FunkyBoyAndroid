@@ -26,7 +26,6 @@
 #include <cerrno>
 #include <cassert>
 #include <cmath>
-#include <vector>
 #include <algorithm>
 
 #include <android_native_app_glue.h>
@@ -37,6 +36,7 @@
 #include <controllers/display_android.h>
 #include <controllers/joypad_android.h>
 #include <fba_util/logging.h>
+#include <state/engine.h>
 
 #define BITMAP_TYPE_DPAD 0
 #define BITMAP_TYPE_KEY_A 1
@@ -44,47 +44,7 @@
 #define BITMAP_TYPE_KEY_START 3
 #define BITMAP_TYPE_KEY_SELECT 4
 
-typedef struct {
-    uint x;
-    uint y;
-    uint width;
-    uint height;
-} ui_obj;
-
-/**
- * Shared state for our app.
- */
-struct engine {
-    struct android_app* app;
-    JNIEnv *env;
-
-    jobject bitmapDpad;
-    jobject bitmapKeyA;
-    jobject bitmapKeyB;
-    jobject bitmapKeyStart;
-    jobject bitmapKeySelect;
-
-    int32_t width;
-    int32_t height;
-
-    int32_t bufferWidth;
-    int32_t bufferHeight;
-
-    ui_obj keyUp;
-    ui_obj keyDown;
-    ui_obj keyLeft;
-    ui_obj keyRight;
-    ui_obj keyA;
-    ui_obj keyB;
-    ui_obj keyStart;
-    ui_obj keySelect;
-
-    float uiScale;
-
-    bool animating;
-
-    std::vector<size_t> activePointerIds;
-};
+using namespace FunkyBoyAndroid;
 
 static int msgPipe[2];
 
