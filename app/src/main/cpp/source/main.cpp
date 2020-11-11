@@ -29,7 +29,6 @@
 #include <algorithm>
 
 #include <android_native_app_glue.h>
-#include <android/bitmap.h>
 
 #include <emulator/emulator.h>
 #include <unistd.h>
@@ -37,6 +36,7 @@
 #include <controllers/joypad_android.h>
 #include <fba_util/logging.h>
 #include <state/engine.h>
+#include <ui/draw_controls.h>
 
 #define BITMAP_TYPE_DPAD 0
 #define BITMAP_TYPE_KEY_A 1
@@ -74,35 +74,6 @@ static jobject loadBitmap(struct engine* engine, jint type) {
     jobject bitmap = env->CallObjectMethod(nativeActivityObj, method, type);
 
     return bitmap;
-}
-
-static int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, int x, int y) {
-    if (bitmap == nullptr) {
-        return -1;
-    }
-    AndroidBitmapInfo info;
-    if (AndroidBitmap_getInfo(env, bitmap, &info) < 0) {
-        LOGW("Unable to get bitmap info");
-        return -2;
-    }
-    char *data = nullptr;
-    if (AndroidBitmap_lockPixels(env, bitmap, (void **) &data) < 0) {
-        LOGW("Unable to lock pixels");
-        return -3;
-    }
-    if (AndroidBitmap_unlockPixels(env, bitmap) < 0) {
-        LOGW("Unable to unlock pixels");
-        return -4;
-    }
-    auto *bitmapPixes = (int32_t *) data;
-    auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
-    for (int _y = 0; _y < info.height; _y++) {
-        for (int _x = 0; _x < info.width; _x++) {
-            line[x + _x] = bitmapPixes[info.height * _y + _x];
-        }
-        line = line + buffer.stride;
-    }
-    return 0;
 }
 
 static int engine_init_display(struct engine* engine) {
@@ -207,29 +178,6 @@ static int engine_init_display(struct engine* engine) {
     }
 
     return result;
-}
-
-static void drawControls(struct engine* engine, ANativeWindow_Buffer &buffer) {
-    jobject bitmap = engine->bitmapDpad;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
-        LOGW("Render of DPad failed");
-    }
-    bitmap = engine->bitmapKeyA;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyA.x, engine->keyA.y) != 0) {
-        LOGW("Render of A key failed");
-    }
-    bitmap = engine->bitmapKeyB;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyB.x, engine->keyB.y) != 0) {
-        LOGW("Render of B key failed");
-    }
-    bitmap = engine->bitmapKeyStart;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyStart.x, engine->keyStart.y) != 0) {
-        LOGW("Render of start key failed");
-    }
-    bitmap = engine->bitmapKeySelect;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keySelect.x, engine->keySelect.y) != 0) {
-        LOGW("Render of select key failed");
-    }
 }
 
 /**

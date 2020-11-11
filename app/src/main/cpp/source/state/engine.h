@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <state/ui_obj.h>
+#include <jni.h>
 
 namespace FunkyBoyAndroid {
 

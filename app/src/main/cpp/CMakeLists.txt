@@ -40,6 +40,8 @@ set(CMAKE_SHARED_LINKER_FLAGS
 
 set(SOURCES
         source/main.cpp
+        source/ui/draw_bitmap.cpp
+        source/ui/draw_controls.cpp
         source/controllers/display_android.cpp
         source/controllers/joypad_android.cpp
         )
@@ -48,6 +50,8 @@ set(HEADERS
         source/fba_util/logging.h
         source/state/engine.h
         source/state/ui_obj.h
+        source/ui/draw_bitmap.h
+        source/ui/draw_controls.h
         source/controllers/display_android.h
         source/controllers/joypad_android.h
         )
