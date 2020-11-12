@@ -40,7 +40,7 @@ int FunkyBoyAndroid::drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
     auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
     for (int _y = 0; _y < info.height; _y++) {
         for (int _x = 0; _x < info.width; _x++) {
-            line[x + _x] = bitmapPixes[info.height * _y + _x];
+            line[x + _x] = bitmapPixes[info.width * _y + _x];
         }
         line = line + buffer.stride;
     }
