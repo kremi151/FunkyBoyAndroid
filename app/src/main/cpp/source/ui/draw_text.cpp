@@ -23,6 +23,9 @@
 #define CHAR_WIDTH 7
 #define CHAR_HEIGHT 7
 
+#define CHAR_SPACING 1
+#define CHAR_ACTUAL_WIDTH (CHAR_WIDTH + CHAR_SPACING)
+
 #define FONT_WIDTH (26 * CHAR_WIDTH)
 #define FONT_HEIGHT CHAR_HEIGHT
 
@@ -50,7 +53,7 @@ int FunkyBoyAndroid::drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
         } else if (chr >= 65 && chr <= 90) {
             chr -= 65;
         } else {
-            x += 7;
+            x += CHAR_ACTUAL_WIDTH;
             continue;
         }
         auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
@@ -60,7 +63,7 @@ int FunkyBoyAndroid::drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
             }
             line = line + buffer.stride;
         }
-        x += 7;
+        x += CHAR_ACTUAL_WIDTH;
     }
     return 0;
 }
@@ -69,5 +72,9 @@ size_t FunkyBoyAndroid::measureTextWidth(const char *text, size_t len) {
     if (len == 0) {
         len = std::strlen(text);
     }
-    return len * CHAR_WIDTH;
+    if (len != 0) {
+        return (len * CHAR_ACTUAL_WIDTH) - CHAR_SPACING;
+    } else {
+        return 0;
+    }
 }
