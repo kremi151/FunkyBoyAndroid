@@ -28,26 +28,18 @@ namespace FunkyBoyAndroid {
 
     class DisplayControllerAndroid: public FunkyBoy::Controller::DisplayController {
         private:
+            struct engine *engine;
             ANativeWindow *window;
             ANativeWindow_Buffer buffer{};
             uint32_t *pixels;
-            bool windowAcquired;
         public:
-            DisplayControllerAndroid();
+            explicit DisplayControllerAndroid(struct engine *engine);
             ~DisplayControllerAndroid() override;
 
             void setWindow(ANativeWindow *window);
 
             void drawScanLine(FunkyBoy::u8 y, FunkyBoy::u8 *buffer) override;
             void drawScreen() override;
-
-            bool wasWindowAcquired() {
-                return windowAcquired;
-            }
-
-            ANativeWindow_Buffer &getBuffer() {
-                return buffer;
-            }
         };
 
     }

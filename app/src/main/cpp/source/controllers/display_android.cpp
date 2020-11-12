@@ -20,15 +20,16 @@
 #include <android/window.h>
 #include <android/native_window_jni.h>
 #include <palette/dmg_palette.h>
+#include <ui/draw_controls.h>
 
 #include <fba_util/logging.h>
 
 using namespace FunkyBoyAndroid::Controller;
 
-DisplayControllerAndroid::DisplayControllerAndroid()
-    : window(nullptr)
+DisplayControllerAndroid::DisplayControllerAndroid(struct engine *engine)
+    : engine(engine)
+    , window(nullptr)
     , pixels(new uint32_t[FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT])
-    , windowAcquired(false)
 {
 }
 
@@ -58,11 +59,9 @@ void DisplayControllerAndroid::drawScreen() {
     ANativeWindow_acquire(window);
     if (ANativeWindow_lock(window, &buffer, nullptr) < 0) {
         LOGW("Unable to lock native window");
-        windowAcquired = false;
         ANativeWindow_release(window);
         return;
     }
-    windowAcquired = true;
     auto *line = (uint32_t *) buffer.bits;
     for (int y = 0 ; y < FB_GB_DISPLAY_HEIGHT ; y++) {
         for (int x = 0 ; x < FB_GB_DISPLAY_WIDTH ; x++) {
@@ -71,6 +70,10 @@ void DisplayControllerAndroid::drawScreen() {
         line = line + buffer.stride;
     }
 
-    // ANativeWindow_unlockAndPost is called in main.cpp
-    // We listen for FB_RET_NEW_FRAME to call it
+    drawControls(engine, buffer);
+
+    if (ANativeWindow_unlockAndPost(window) < 0) {
+        LOGW("Unable to unlock and post to native window");
+    }
+    ANativeWindow_release(window);
 }

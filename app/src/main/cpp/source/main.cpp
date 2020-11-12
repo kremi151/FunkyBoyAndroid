@@ -184,24 +184,14 @@ static int engine_init_display(struct engine* engine) {
  * Just the current frame in the display.
  */
 static void engine_draw_frame(struct engine* engine) {
-    FunkyBoy::ret_code retCode = 0;
     ANativeWindow *window = engine->app->window;
     auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
     if (emulator->getCartridge().getStatus() == FunkyBoy::CartridgeStatus::Loaded) {
         controller->setWindow(window);
-        retCode = emulator->doTick();
+        emulator->doTick();
         controller->setWindow(nullptr);
     }
-
-    if (retCode & FB_RET_NEW_FRAME && controller->wasWindowAcquired()) {
-        drawControls(engine, controller->getBuffer());
-        if (ANativeWindow_unlockAndPost(window) < 0) {
-            LOGW("Unable to unlock and post to native window");
-        }
-        ANativeWindow_release(window);
-    }
-
 }
 
 /**
@@ -444,7 +434,7 @@ void android_main(struct android_app* state) {
     engine.env = env;
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
-    emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>();
+    emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
     emuJoypadController = std::make_shared<FunkyBoyAndroid::Controller::JoypadControllerAndroid>();
     controllers->setDisplay(emuDisplayController);
     controllers->setJoypad(emuJoypadController);
