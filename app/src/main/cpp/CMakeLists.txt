@@ -42,6 +42,7 @@ set(SOURCES
         source/main.cpp
         source/ui/draw_bitmap.cpp
         source/ui/draw_controls.cpp
+        source/ui/draw_text.cpp
         source/controllers/display_android.cpp
         source/controllers/joypad_android.cpp
         )
@@ -52,6 +53,7 @@ set(HEADERS
         source/state/ui_obj.h
         source/ui/draw_bitmap.h
         source/ui/draw_controls.h
+        source/ui/draw_text.h
         source/controllers/display_android.h
         source/controllers/joypad_android.h
         )

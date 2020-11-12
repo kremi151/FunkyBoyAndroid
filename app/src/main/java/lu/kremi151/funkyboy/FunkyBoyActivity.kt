@@ -81,6 +81,7 @@ class FunkyBoyActivity: NativeActivity() {
             2 -> loadBitmapFromResources(R.drawable.key_b)
             3 -> loadBitmapFromResources(R.drawable.key_start)
             4 -> loadBitmapFromResources(R.drawable.key_select)
+            5 -> loadBitmapFromResources(R.drawable.font_uppercase)
             else -> null
         }
     }

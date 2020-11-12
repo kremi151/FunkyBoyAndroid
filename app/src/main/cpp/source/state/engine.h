@@ -35,6 +35,7 @@ namespace FunkyBoyAndroid {
         jobject bitmapKeyB;
         jobject bitmapKeyStart;
         jobject bitmapKeySelect;
+        jobject bitmapFontsUppercase;
 
         int32_t width;
         int32_t height;

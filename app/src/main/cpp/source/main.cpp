@@ -37,12 +37,14 @@
 #include <fba_util/logging.h>
 #include <state/engine.h>
 #include <ui/draw_controls.h>
+#include <ui/draw_text.h>
 
 #define BITMAP_TYPE_DPAD 0
 #define BITMAP_TYPE_KEY_A 1
 #define BITMAP_TYPE_KEY_B 2
 #define BITMAP_TYPE_KEY_START 3
 #define BITMAP_TYPE_KEY_SELECT 4
+#define BITMAP_FONT_UPPERCASE 5
 
 using namespace FunkyBoyAndroid;
 
@@ -176,6 +178,13 @@ static int engine_init_display(struct engine* engine) {
     } else {
         LOGW("Unable to load select key bitmap");
     }
+    bitmap = loadBitmap(engine, BITMAP_FONT_UPPERCASE);
+    if (bitmap != nullptr) {
+        bitmap = engine->env->NewGlobalRef(bitmap);
+        engine->bitmapFontsUppercase = bitmap;
+    } else {
+        LOGW("Unable to load uppercase font bitmap");
+    }
 
     return result;
 }
@@ -199,7 +208,18 @@ static void engine_draw_frame(struct engine* engine) {
             ANativeWindow_release(window);
             return;
         }
+
+        // White background
+        std::memset(buffer.bits, 255, buffer.stride * FB_GB_DISPLAY_HEIGHT * 4);
+
+        // Draw text
+        const char *text = "Tap to load ROM";
+        size_t text_width = measureTextWidth(text, 0);
+        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 16);
+
+        // Draw controls
         drawControls(engine, buffer);
+
         if (ANativeWindow_unlockAndPost(window) < 0) {
             LOGW("Unable to unlock and post to native window");
         }
@@ -231,6 +251,10 @@ static void engine_term_display(struct engine* engine) {
     if (engine->bitmapKeySelect != nullptr) {
         engine->env->DeleteGlobalRef(engine->bitmapKeySelect);
         engine->bitmapKeySelect = nullptr;
+    }
+    if (engine->bitmapFontsUppercase != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapFontsUppercase);
+        engine->bitmapFontsUppercase = nullptr;
     }
     engine->animating = false;
 }
