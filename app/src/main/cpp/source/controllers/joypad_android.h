@@ -19,11 +19,11 @@
 
 #include <controllers/joypad.h>
 
-namespace FunkyBoy {
+namespace FunkyBoyAndroid {
 
     namespace Controller {
 
-        class JoypadControllerAndroid: public JoypadController {
+        class JoypadControllerAndroid: public FunkyBoy::Controller::JoypadController {
         public:
             bool a;
             bool b;
@@ -36,7 +36,7 @@ namespace FunkyBoy {
 
             JoypadControllerAndroid();
 
-            bool isKeyPressed(JoypadKey key) override;
+            bool isKeyPressed(FunkyBoy::Controller::JoypadKey key) override;
         };
 
     }

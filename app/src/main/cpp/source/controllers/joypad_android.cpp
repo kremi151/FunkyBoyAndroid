@@ -16,7 +16,7 @@
 
 #include "joypad_android.h"
 
-using namespace FunkyBoy::Controller;
+using namespace FunkyBoyAndroid::Controller;
 
 JoypadControllerAndroid::JoypadControllerAndroid()
     : a(false)

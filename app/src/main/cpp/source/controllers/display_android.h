@@ -18,14 +18,15 @@
 #define FB_ANDROID_CONTROLLER_DISPLAY_ANDROID_H
 
 #include <controllers/display.h>
+#include <state/engine.h>
 
 #include <android/native_window.h>
 
-namespace FunkyBoy {
+namespace FunkyBoyAndroid {
 
     namespace Controller {
 
-        class DisplayControllerAndroid: public DisplayController {
+    class DisplayControllerAndroid: public FunkyBoy::Controller::DisplayController {
         private:
             ANativeWindow *window;
             ANativeWindow_Buffer buffer{};
@@ -37,7 +38,7 @@ namespace FunkyBoy {
 
             void setWindow(ANativeWindow *window);
 
-            void drawScanLine(u8 y, u8 *buffer) override;
+            void drawScanLine(FunkyBoy::u8 y, FunkyBoy::u8 *buffer) override;
             void drawScreen() override;
 
             bool wasWindowAcquired() {

@@ -50,7 +50,7 @@ static int msgPipe[2];
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
-std::shared_ptr<FunkyBoy::Controller::JoypadControllerAndroid> emuJoypadController;
+std::shared_ptr<FunkyBoy::Controller::JoypadController> emuJoypadController;
 
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -186,7 +186,7 @@ static int engine_init_display(struct engine* engine) {
 static void engine_draw_frame(struct engine* engine) {
     FunkyBoy::ret_code retCode = 0;
     ANativeWindow *window = engine->app->window;
-    auto controller = dynamic_cast<FunkyBoy::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
+    auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
     if (emulator->getCartridge().getStatus() == FunkyBoy::CartridgeStatus::Loaded) {
         controller->setWindow(window);
@@ -237,7 +237,7 @@ static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
         && scaledY >= obj.y && scaledY < obj.y + obj.height;
 }
 
-static void handleInputPointer(int index, AInputEvent* event, struct engine *engine, FunkyBoy::Controller::JoypadControllerAndroid &joypad) {
+static void handleInputPointer(int index, AInputEvent* event, struct engine *engine, FunkyBoyAndroid::Controller::JoypadControllerAndroid &joypad) {
     float scaledX = AMotionEvent_getX(event, index) * engine->uiScale;
     float scaledY = AMotionEvent_getY(event, index) * engine->uiScale;
     bool touched = isTouched(engine->keyA, scaledX, scaledY);
@@ -330,7 +330,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
             break;
     }
 
-    auto &joypad = *dynamic_cast<FunkyBoy::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
+    auto &joypad = *dynamic_cast<FunkyBoyAndroid::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
 
     joypad.a = false;
     joypad.b = false;
@@ -444,8 +444,8 @@ void android_main(struct android_app* state) {
     engine.env = env;
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
-    emuDisplayController = std::make_shared<FunkyBoy::Controller::DisplayControllerAndroid>();
-    emuJoypadController = std::make_shared<FunkyBoy::Controller::JoypadControllerAndroid>();
+    emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>();
+    emuJoypadController = std::make_shared<FunkyBoyAndroid::Controller::JoypadControllerAndroid>();
     controllers->setDisplay(emuDisplayController);
     controllers->setJoypad(emuJoypadController);
     emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);

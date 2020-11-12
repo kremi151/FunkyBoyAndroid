@@ -23,7 +23,7 @@
 
 #include <fba_util/logging.h>
 
-using namespace FunkyBoy::Controller;
+using namespace FunkyBoyAndroid::Controller;
 
 DisplayControllerAndroid::DisplayControllerAndroid()
     : window(nullptr)
@@ -40,10 +40,10 @@ void DisplayControllerAndroid::setWindow(ANativeWindow *w) {
     window = w;
 }
 
-void DisplayControllerAndroid::drawScanLine(u8 y, u8 *buffer) {
+void DisplayControllerAndroid::drawScanLine(FunkyBoy::u8 y, FunkyBoy::u8 *buffer) {
     uint32_t pixel;
-    for (u8 x = 0 ; x < FB_GB_DISPLAY_WIDTH ; x++) {
-        auto &color = Palette::ARGB8888::DMG[*(buffer + x)];
+    for (FunkyBoy::u8 x = 0 ; x < FB_GB_DISPLAY_WIDTH ; x++) {
+        auto &color = FunkyBoy::Palette::ARGB8888::DMG[*(buffer + x)];
         pixel = (255u << 24u) | (color[0] << 16) | (color[1] << 8) | color[2];
         pixels[(y * FB_GB_DISPLAY_WIDTH) + x] = pixel;
     }
