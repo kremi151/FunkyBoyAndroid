@@ -191,6 +191,19 @@ static void engine_draw_frame(struct engine* engine) {
         controller->setWindow(window);
         emulator->doTick();
         controller->setWindow(nullptr);
+    } else {
+        ANativeWindow_acquire(window);
+        ANativeWindow_Buffer buffer;
+        if (ANativeWindow_lock(window, &buffer, nullptr) < 0) {
+            LOGW("Unable to lock native window");
+            ANativeWindow_release(window);
+            return;
+        }
+        drawControls(engine, buffer);
+        if (ANativeWindow_unlockAndPost(window) < 0) {
+            LOGW("Unable to unlock and post to native window");
+        }
+        ANativeWindow_release(window);
     }
 }
 
