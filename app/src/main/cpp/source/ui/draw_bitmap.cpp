@@ -18,7 +18,7 @@
 
 #include <fba_util/logging.h>
 
-int FunkyBoyAndroid::drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, int x, int y) {
+int FunkyBoyAndroid::drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, uint u, uint v, uint w, uint h, uint x, uint y) {
     if (bitmap == nullptr) {
         return -1;
     }
@@ -38,11 +38,23 @@ int FunkyBoyAndroid::drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
     }
     auto *bitmapPixes = (int32_t *) data;
     auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
-    for (int _y = 0; _y < info.height; _y++) {
-        for (int _x = 0; _x < info.width; _x++) {
-            line[x + _x] = bitmapPixes[info.width * _y + _x];
+    for (int _y = 0; _y < h; _y++) {
+        for (int _x = 0; _x < w; _x++) {
+            line[x + _x] = bitmapPixes[info.width * (_y + v) + _x + u];
         }
         line = line + buffer.stride;
     }
     return 0;
+}
+
+int FunkyBoyAndroid::drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, uint x, uint y) {
+    if (bitmap == nullptr) {
+        return -1;
+    }
+    AndroidBitmapInfo info;
+    if (AndroidBitmap_getInfo(env, bitmap, &info) < 0) {
+        LOGW("Unable to get bitmap info");
+        return -2;
+    }
+    return drawBitmap(env, buffer, bitmap, 0, 0, info.width, info.height, x, y);
 }

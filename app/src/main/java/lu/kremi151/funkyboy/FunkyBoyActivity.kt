@@ -76,12 +76,8 @@ class FunkyBoyActivity: NativeActivity() {
     @Suppress("unused") // Used over JNI
     fun loadBitmap(type: Int): Bitmap? {
         return when (type) {
-            0 -> loadBitmapFromResources(R.drawable.dpad)
-            1 -> loadBitmapFromResources(R.drawable.key_a)
-            2 -> loadBitmapFromResources(R.drawable.key_b)
-            3 -> loadBitmapFromResources(R.drawable.key_start)
-            4 -> loadBitmapFromResources(R.drawable.key_select)
-            5 -> loadBitmapFromResources(R.drawable.font_uppercase)
+            0 -> loadBitmapFromResources(R.drawable.buttons)
+            1 -> loadBitmapFromResources(R.drawable.font_uppercase)
             else -> null
         }
     }

@@ -30,11 +30,7 @@ namespace FunkyBoyAndroid {
         struct android_app* app;
         JNIEnv *env;
 
-        jobject bitmapDpad;
-        jobject bitmapKeyA;
-        jobject bitmapKeyB;
-        jobject bitmapKeyStart;
-        jobject bitmapKeySelect;
+        jobject bitmapButtons;
         jobject bitmapFontsUppercase;
 
         int32_t width;

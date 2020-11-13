@@ -17,13 +17,15 @@
 #ifndef FB_ANDROID_UI_DRAW_BITMAP_H
 #define FB_ANDROID_UI_DRAW_BITMAP_H
 
+#include <cstdlib>
 #include <jni.h>
 #include <android/bitmap.h>
 #include <android/native_window.h>
 
 namespace FunkyBoyAndroid {
 
-    int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, int x, int y);
+    int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, uint x, uint y);
+    int drawBitmap(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject bitmap, uint u, uint v, uint w, uint h, uint x, uint y);
 
 }
 

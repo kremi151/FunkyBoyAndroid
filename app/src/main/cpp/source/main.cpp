@@ -39,12 +39,8 @@
 #include <ui/draw_controls.h>
 #include <ui/draw_text.h>
 
-#define BITMAP_TYPE_DPAD 0
-#define BITMAP_TYPE_KEY_A 1
-#define BITMAP_TYPE_KEY_B 2
-#define BITMAP_TYPE_KEY_START 3
-#define BITMAP_TYPE_KEY_SELECT 4
-#define BITMAP_FONT_UPPERCASE 5
+#define BITMAP_TYPE_BUTTONS 0
+#define BITMAP_FONT_UPPERCASE 1
 
 using namespace FunkyBoyAndroid;
 
@@ -143,40 +139,12 @@ static int engine_init_display(struct engine* engine) {
         LOGW("Unable to set buffers geometry");
     }
 
-    jobject bitmap = loadBitmap(engine, BITMAP_TYPE_DPAD);
+    jobject bitmap = loadBitmap(engine, BITMAP_TYPE_BUTTONS);
     if (bitmap != nullptr) {
         bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapDpad = bitmap;
+        engine->bitmapButtons = bitmap;
     } else {
-        LOGW("Unable to load DPad bitmap");
-    }
-    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_A);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapKeyA = bitmap;
-    } else {
-        LOGW("Unable to load A key bitmap");
-    }
-    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_B);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapKeyB = bitmap;
-    } else {
-        LOGW("Unable to load B key bitmap");
-    }
-    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_START);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapKeyStart = bitmap;
-    } else {
-        LOGW("Unable to load start key bitmap");
-    }
-    bitmap = loadBitmap(engine, BITMAP_TYPE_KEY_SELECT);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapKeySelect = bitmap;
-    } else {
-        LOGW("Unable to load select key bitmap");
+        LOGW("Unable to load buttons texture bitmap");
     }
     bitmap = loadBitmap(engine, BITMAP_FONT_UPPERCASE);
     if (bitmap != nullptr) {
@@ -232,25 +200,9 @@ static void engine_draw_frame(struct engine* engine) {
  */
 static void engine_term_display(struct engine* engine) {
     LOGD("engine_term_display");
-    if (engine->bitmapDpad != nullptr) {
-        engine->env->DeleteGlobalRef(engine->bitmapDpad);
-        engine->bitmapDpad = nullptr;
-    }
-    if (engine->bitmapKeyA != nullptr) {
-        engine->env->DeleteGlobalRef(engine->bitmapKeyA);
-        engine->bitmapKeyA = nullptr;
-    }
-    if (engine->bitmapKeyB != nullptr) {
-        engine->env->DeleteGlobalRef(engine->bitmapKeyB);
-        engine->bitmapKeyB = nullptr;
-    }
-    if (engine->bitmapKeyStart != nullptr) {
-        engine->env->DeleteGlobalRef(engine->bitmapKeyStart);
-        engine->bitmapKeyStart = nullptr;
-    }
-    if (engine->bitmapKeySelect != nullptr) {
-        engine->env->DeleteGlobalRef(engine->bitmapKeySelect);
-        engine->bitmapKeySelect = nullptr;
+    if (engine->bitmapButtons != nullptr) {
+        engine->env->DeleteGlobalRef(engine->bitmapButtons);
+        engine->bitmapButtons = nullptr;
     }
     if (engine->bitmapFontsUppercase != nullptr) {
         engine->env->DeleteGlobalRef(engine->bitmapFontsUppercase);

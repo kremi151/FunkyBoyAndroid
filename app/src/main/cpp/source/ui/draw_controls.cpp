@@ -21,24 +21,20 @@
 #include <ui/draw_bitmap.h>
 
 void FunkyBoyAndroid::drawControls(struct engine* engine, ANativeWindow_Buffer &buffer) {
-    jobject bitmap = engine->bitmapDpad;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyLeft.x, engine->keyUp.y) != 0) {
+    jobject bitmap = engine->bitmapButtons;
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 0, 0, 50, 50, engine->keyLeft.x, engine->keyUp.y) != 0) {
         LOGW("Render of DPad failed");
     }
-    bitmap = engine->bitmapKeyA;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyA.x, engine->keyA.y) != 0) {
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 50, 0, 25, 25, engine->keyA.x, engine->keyA.y) != 0) {
         LOGW("Render of A key failed");
     }
-    bitmap = engine->bitmapKeyB;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyB.x, engine->keyB.y) != 0) {
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 50, 25, 25, 25, engine->keyB.x, engine->keyB.y) != 0) {
         LOGW("Render of B key failed");
     }
-    bitmap = engine->bitmapKeyStart;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keyStart.x, engine->keyStart.y) != 0) {
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 75, 0, 25, 10, engine->keyStart.x, engine->keyStart.y) != 0) {
         LOGW("Render of start key failed");
     }
-    bitmap = engine->bitmapKeySelect;
-    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, engine->keySelect.x, engine->keySelect.y) != 0) {
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 75, 10, 25, 10, engine->keySelect.x, engine->keySelect.y) != 0) {
         LOGW("Render of select key failed");
     }
 }
