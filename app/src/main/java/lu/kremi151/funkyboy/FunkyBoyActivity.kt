@@ -77,7 +77,7 @@ class FunkyBoyActivity: NativeActivity() {
     fun loadBitmap(type: Int): Bitmap? {
         return when (type) {
             0 -> loadBitmapFromResources(R.drawable.buttons)
-            1 -> loadBitmapFromResources(R.drawable.font_uppercase)
+            1 -> loadBitmapFromResources(R.drawable.font)
             else -> null
         }
     }
