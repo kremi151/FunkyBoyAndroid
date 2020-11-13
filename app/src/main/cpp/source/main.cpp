@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cmath>
 #include <algorithm>
+#include <sys/time.h>
 
 #include <android_native_app_glue.h>
 
@@ -45,6 +46,7 @@
 using namespace FunkyBoyAndroid;
 
 static int msgPipe[2];
+struct timeval tp;
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
@@ -180,10 +182,7 @@ static void engine_draw_frame(struct engine* engine) {
         // White background
         std::memset(buffer.bits, 255, buffer.stride * FB_GB_DISPLAY_HEIGHT * 4);
 
-        // Draw text
-        const char *text = "TAP TO LOAD ROM";
-        size_t text_width = measureTextWidth(text, 0);
-        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 32);
+        const char *text;
 
         // Draw ROM status
         switch (emulator->getCartridge().getStatus()) {
@@ -215,8 +214,16 @@ static void engine_draw_frame(struct engine* engine) {
                 text = "Unknown status";
                 break;
         }
-        text_width = measureTextWidth(text, 0);
-        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
+        size_t text_width = measureTextWidth(text, 0);
+        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 32);
+
+        // Draw headline
+        gettimeofday(&tp, nullptr);
+        if (tp.tv_sec % 2 == 1) {
+            text = "TAP TO LOAD ROM";
+            text_width = measureTextWidth(text, 0);
+            drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
+        }
 
         // Draw controls
         drawControls(engine, buffer);
