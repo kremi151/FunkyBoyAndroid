@@ -27,7 +27,7 @@
 #include <cassert>
 #include <cmath>
 #include <algorithm>
-#include <sys/time.h>
+#include <ctime>
 
 #include <android_native_app_glue.h>
 
