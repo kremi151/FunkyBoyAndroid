@@ -220,7 +220,7 @@ static void engine_draw_frame(struct engine* engine) {
         // Draw headline
         gettimeofday(&tp, nullptr);
         if (tp.tv_sec % 2 == 1) {
-            text = "TAP TO LOAD ROM";
+            text = "PRESS START!";
             text_width = measureTextWidth(text, 0);
             drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
         }
@@ -311,12 +311,21 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
         return 0;
     }
     auto* engine = (struct engine*)app->userData;
-    if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
-        requestPickRom(engine);
-        return 1;
-    }
     int action = AMotionEvent_getAction(event);
     uint flags = action & AMOTION_EVENT_ACTION_MASK;
+
+    if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+        if (flags == AMOTION_EVENT_ACTION_DOWN) {
+            float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
+            float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
+            bool touched = isTouched(engine->keyStart, scaledX, scaledY);
+            if (touched) {
+                requestPickRom(engine);
+            }
+        }
+        return 1;
+    }
+
     auto &activePointerIds = engine->activePointerIds;
     switch (flags) {
         case AMOTION_EVENT_ACTION_DOWN:
