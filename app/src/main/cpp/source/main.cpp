@@ -181,9 +181,42 @@ static void engine_draw_frame(struct engine* engine) {
         std::memset(buffer.bits, 255, buffer.stride * FB_GB_DISPLAY_HEIGHT * 4);
 
         // Draw text
-        const char *text = "Tap to load ROM";
+        const char *text = "TAP TO LOAD ROM";
         size_t text_width = measureTextWidth(text, 0);
-        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 16);
+        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 32);
+
+        // Draw ROM status
+        switch (emulator->getCartridge().getStatus()) {
+            case FunkyBoy::NoROMLoaded:
+                text = "No ROM loaded";
+                break;
+            case FunkyBoy::ROMFileNotReadable:
+                text = "ROM not readable";
+                break;
+            case FunkyBoy::ROMParseError:
+                text = "ROM not parsable";
+                break;
+            case FunkyBoy::ROMTooBig:
+                text = "ROM is too big";
+                break;
+            case FunkyBoy::ROMSizeMismatch:
+                text = "ROM size mismatch";
+                break;
+            case FunkyBoy::ROMUnsupportedMBC:
+                text = "Unsupported MBC";
+                break;
+            case FunkyBoy::RAMSizeUnsupported:
+                text = "Unsupported RAM size";
+                break;
+            case FunkyBoy::Loaded:
+                text = "";
+                break;
+            default:
+                text = "Unknown status";
+                break;
+        }
+        text_width = measureTextWidth(text, 0);
+        drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
 
         // Draw controls
         drawControls(engine, buffer);
@@ -387,7 +420,6 @@ static int handleCustomMessage(int fd, int events, void* data) {
     LOGD("RECV rom path: %s", romPath);
 
     auto result = emulator->loadGame(romPath);
-
     LOGD("ROM load status: %d", result);
 
     free(romPath);

@@ -21,13 +21,12 @@
 #include <cstring>
 
 #define CHAR_WIDTH 7
-#define CHAR_HEIGHT 7
 
 #define CHAR_SPACING 1
 #define CHAR_ACTUAL_WIDTH (CHAR_WIDTH + CHAR_SPACING)
 
 #define FONT_WIDTH (26 * CHAR_WIDTH)
-#define FONT_HEIGHT CHAR_HEIGHT
+#define FONT_HEIGHT FBA_CHAR_HEIGHT
 
 int FunkyBoyAndroid::drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject font, const char *text, size_t len, uint x, uint y) {
     char *fontData = nullptr;
@@ -52,12 +51,12 @@ int FunkyBoyAndroid::drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
         chr = *(c++);
         if (chr >= 97 && chr <= 122) {
             chr -= 97;
-            fy_start = 7;
-            fy_end = 14;
+            fy_start = FONT_HEIGHT;
+            fy_end = 2 * FONT_HEIGHT;
         } else if (chr >= 65 && chr <= 90) {
             chr -= 65;
             fy_start = 0;
-            fy_end = 7;
+            fy_end = FONT_HEIGHT;
         } else {
             x += CHAR_ACTUAL_WIDTH;
             continue;

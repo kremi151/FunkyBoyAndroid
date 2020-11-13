@@ -21,10 +21,16 @@
 #include <jni.h>
 #include <android/native_window.h>
 
+#define FBA_CHAR_HEIGHT 7
+
 namespace FunkyBoyAndroid {
 
     int drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobject font, const char *text, size_t len, uint x, uint y);
     size_t measureTextWidth(const char* text, size_t len);
+
+    inline size_t lineHeight() {
+        return FBA_CHAR_HEIGHT;
+    }
 
 }
 
