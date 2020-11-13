@@ -45,21 +45,27 @@ int FunkyBoyAndroid::drawTextAt(JNIEnv *env, ANativeWindow_Buffer &buffer, jobje
     const char *c = text;
     const char *end = text + len;
     char chr;
+    unsigned short fy_start;
+    unsigned short fy_end;
     auto *bitmapPixes = (uint32_t *) fontData;
     while (c != end) {
         chr = *(c++);
         if (chr >= 97 && chr <= 122) {
             chr -= 97;
+            fy_start = 7;
+            fy_end = 14;
         } else if (chr >= 65 && chr <= 90) {
             chr -= 65;
+            fy_start = 0;
+            fy_end = 7;
         } else {
             x += CHAR_ACTUAL_WIDTH;
             continue;
         }
         auto *line = (uint32_t *) buffer.bits + (y * buffer.stride);
-        for (int _y = 0; _y < FONT_HEIGHT; _y++) {
+        for (; fy_start < fy_end; fy_start++) {
             for (int _x = 0; _x < CHAR_WIDTH; _x++) {
-                line[x + _x] = bitmapPixes[(FONT_WIDTH * _y) + _x + (chr * CHAR_WIDTH)];
+                line[x + _x] = bitmapPixes[(FONT_WIDTH * fy_start) + _x + (chr * CHAR_WIDTH)];
             }
             line = line + buffer.stride;
         }
