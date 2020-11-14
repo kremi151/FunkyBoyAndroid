@@ -25,7 +25,7 @@ jobs:
       - name: Change ownership of build directory
         run: sudo chown -R $(id -u):$(id -g) ${{ github.workspace }}/app/build
       - name: Sign APK
-        uses: r0adkll/sign-android-release@v1.0.3
+        uses: r0adkll/sign-android-release@21072f7435f485b65555103ff2c60e86560b759e
         if: ${{ github.event_name != 'pull_request' }}
         with:
           releaseDirectory: "${{ github.workspace }}/app/build/outputs/apk/release"
