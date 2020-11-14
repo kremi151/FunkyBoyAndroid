@@ -3,6 +3,10 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - '.github/workflows/**'
+      - 'build.gradle'
   pull_request:
     branches: [ main ]
 
