@@ -21,7 +21,7 @@
 #include <jni.h>
 #include <android/native_window.h>
 
-#define FBA_CHAR_HEIGHT 7
+#define FBA_CHAR_HEIGHT 8
 
 namespace FunkyBoyAndroid {
 
