@@ -166,7 +166,7 @@ static void engine_draw_frame(struct engine* engine) {
     ANativeWindow *window = engine->app->window;
     auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
-    if (emulator->getCartridge().getStatus() == FunkyBoy::CartridgeStatus::Loaded) {
+    if (emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
         controller->setWindow(window);
         emulator->doTick();
         controller->setWindow(nullptr);
@@ -185,7 +185,7 @@ static void engine_draw_frame(struct engine* engine) {
         const char *text;
 
         // Draw ROM status
-        switch (emulator->getCartridge().getStatus()) {
+        switch (emulator->getCartridgeStatus()) {
             case FunkyBoy::NoROMLoaded:
                 text = "No ROM loaded";
                 break;
@@ -314,7 +314,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     int action = AMotionEvent_getAction(event);
     uint flags = action & AMOTION_EVENT_ACTION_MASK;
 
-    if (emulator->getCartridge().getStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+    if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
         if (flags == AMOTION_EVENT_ACTION_DOWN) {
             float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
             float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
