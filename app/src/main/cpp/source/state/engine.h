@@ -52,6 +52,8 @@ namespace FunkyBoyAndroid {
 
         bool animating;
 
+        int keyLatch;
+
         std::vector<size_t> activePointerIds;
     };
 

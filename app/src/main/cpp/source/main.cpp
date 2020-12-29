@@ -34,7 +34,6 @@
 #include <emulator/emulator.h>
 #include <unistd.h>
 #include <controllers/display_android.h>
-#include <controllers/joypad_android.h>
 #include <fba_util/logging.h>
 #include <state/engine.h>
 #include <ui/draw_controls.h>
@@ -43,6 +42,15 @@
 #define BITMAP_TYPE_BUTTONS 0
 #define BITMAP_FONT_UPPERCASE 1
 
+#define FBA_KEY_A 0b00000001
+#define FBA_KEY_B 0b00000010
+#define FBA_KEY_START 0b00000100
+#define FBA_KEY_SELECT 0b00001000
+#define FBA_KEY_LEFT 0b00010000
+#define FBA_KEY_UP 0b00100000
+#define FBA_KEY_RIGHT 0b01000000
+#define FBA_KEY_DOWN 0b10000000
+
 using namespace FunkyBoyAndroid;
 
 static int msgPipe[2];
@@ -50,7 +58,6 @@ struct timeval tp;
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
-std::shared_ptr<FunkyBoy::Controller::JoypadController> emuJoypadController;
 
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -156,6 +163,8 @@ static int engine_init_display(struct engine* engine) {
         LOGW("Unable to load uppercase font bitmap");
     }
 
+    engine->keyLatch = 0;
+
     return result;
 }
 
@@ -256,40 +265,40 @@ static bool isTouched(const ui_obj &obj, float scaledX, float scaledY) {
         && scaledY >= obj.y && scaledY < obj.y + obj.height;
 }
 
-static void handleInputPointer(int index, AInputEvent* event, struct engine *engine, FunkyBoyAndroid::Controller::JoypadControllerAndroid &joypad) {
+static void handleInputPointer(int index, AInputEvent* event, struct engine *engine, int &latch) {
     float scaledX = AMotionEvent_getX(event, index) * engine->uiScale;
     float scaledY = AMotionEvent_getY(event, index) * engine->uiScale;
     bool touched = isTouched(engine->keyA, scaledX, scaledY);
     if (touched) {
-        joypad.a = true;
+        latch |= FBA_KEY_A;
     }
     touched = isTouched(engine->keyB, scaledX, scaledY);
     if (touched) {
-        joypad.b = true;
+        latch |= FBA_KEY_B;
     }
     touched = isTouched(engine->keyLeft, scaledX, scaledY);
     if (touched) {
-        joypad.left = true;
+        latch |= FBA_KEY_LEFT;
     }
     touched = isTouched(engine->keyUp, scaledX, scaledY);
     if (touched) {
-        joypad.up = true;
+        latch |= FBA_KEY_UP;
     }
     touched = isTouched(engine->keyRight, scaledX, scaledY);
     if (touched) {
-        joypad.right = true;
+        latch |= FBA_KEY_RIGHT;
     }
     touched = isTouched(engine->keyDown, scaledX, scaledY);
     if (touched) {
-        joypad.down = true;
+        latch |= FBA_KEY_DOWN;
     }
     touched = isTouched(engine->keyStart, scaledX, scaledY);
     if (touched) {
-        joypad.start = true;
+        latch |= FBA_KEY_START;
     }
     touched = isTouched(engine->keySelect, scaledX, scaledY);
     if (touched) {
-        joypad.select = true;
+        latch |= FBA_KEY_SELECT;
     }
 }
 
@@ -358,25 +367,29 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
             break;
     }
 
-    auto &joypad = *dynamic_cast<FunkyBoyAndroid::Controller::JoypadControllerAndroid *>(emuJoypadController.get());
-
-    joypad.a = false;
-    joypad.b = false;
-    joypad.start = false;
-    joypad.select = false;
-    joypad.left = false;
-    joypad.up = false;
-    joypad.right = false;
-    joypad.down = false;
+    int keyLatch = 0;
 
     auto it = activePointerIds.begin();
     auto it_end = activePointerIds.end();
     for (; it != it_end; ++it) {
         auto pointerIndex = findPointerIndex(event, *it);
         if (pointerIndex != -1) {
-            handleInputPointer(pointerIndex, event, engine, joypad);
+            handleInputPointer(pointerIndex, event, engine, keyLatch);
         }
     }
+
+    if (keyLatch != engine->keyLatch) {
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_A, keyLatch & FBA_KEY_A);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_B, keyLatch & FBA_KEY_B);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_START, keyLatch & FBA_KEY_START);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_SELECT, keyLatch & FBA_KEY_SELECT);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_LEFT, keyLatch & FBA_KEY_LEFT);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_UP, keyLatch & FBA_KEY_UP);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_RIGHT, keyLatch & FBA_KEY_RIGHT);
+        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_DOWN, keyLatch & FBA_KEY_DOWN);
+        engine->keyLatch = keyLatch;
+    }
+
     return 1;
 }
 
@@ -472,9 +485,7 @@ void android_main(struct android_app* state) {
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
-    emuJoypadController = std::make_shared<FunkyBoyAndroid::Controller::JoypadControllerAndroid>();
     controllers->setDisplay(emuDisplayController);
-    controllers->setJoypad(emuJoypadController);
     emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     if (state->savedState != nullptr) {

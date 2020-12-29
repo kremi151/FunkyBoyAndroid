@@ -44,7 +44,6 @@ set(SOURCES
         source/ui/draw_controls.cpp
         source/ui/draw_text.cpp
         source/controllers/display_android.cpp
-        source/controllers/joypad_android.cpp
         )
 
 set(HEADERS
@@ -55,7 +54,6 @@ set(HEADERS
         source/ui/draw_controls.h
         source/ui/draw_text.h
         source/controllers/display_android.h
-        source/controllers/joypad_android.h
         )
 
 add_library(fb_android SHARED ${SOURCES} ${HEADERS})
