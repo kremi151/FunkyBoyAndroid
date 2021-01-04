@@ -38,6 +38,7 @@
 #include <state/engine.h>
 #include <ui/draw_controls.h>
 #include <ui/draw_text.h>
+#include <util/frame_executor.h>
 
 #define BITMAP_TYPE_BUTTONS 0
 #define BITMAP_FONT_UPPERCASE 1
@@ -177,7 +178,10 @@ static void engine_draw_frame(struct engine* engine) {
 
     if (emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
         controller->setWindow(window);
-        emulator->doTick();
+        FunkyBoy::ret_code retCode;
+        do {
+            retCode = emulator->doTick();
+        } while ((retCode & FB_RET_NEW_FRAME) == 0);
         controller->setWindow(nullptr);
     } else {
         ANativeWindow_acquire(window);
@@ -497,7 +501,9 @@ void android_main(struct android_app* state) {
     pipe(msgPipe);
     ALooper_addFd(state->looper, msgPipe[0], ALOOPER_POLL_CALLBACK , ALOOPER_EVENT_INPUT, handleCustomMessage, state);
 
-    // loop waiting for stuff to do.
+    FunkyBoy::Util::FrameExecutor executeFrame([&engine](){
+        engine_draw_frame(&engine);
+    }, FB_TARGET_FPS);
 
     while (true) {
         // Read all pending events.
@@ -524,16 +530,7 @@ void android_main(struct android_app* state) {
         }
 
         if (engine.animating) {
-            // Done with events; draw next animation frame.
-            // TODO: Emulator tick
-            /* engine.state.angle += .01f;
-            if (engine.state.angle > 1) {
-                engine.state.angle = 0;
-            } */
-
-            // Drawing is throttled to the screen update rate, so there
-            // is no need to do timing here.
-            engine_draw_frame(&engine);
+            executeFrame();
         }
     }
 
