@@ -28,6 +28,7 @@
 #include <cmath>
 #include <algorithm>
 #include <ctime>
+#include <fstream>
 
 #include <android_native_app_glue.h>
 
@@ -60,6 +61,9 @@ struct timeval tp;
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
+std::string saveGamePath;
+bool saveRequested = false;
+
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
     JNIEnv *env = engine->env;
@@ -82,6 +86,34 @@ static jobject loadBitmap(struct engine* engine, jint type) {
     jobject bitmap = env->CallObjectMethod(nativeActivityObj, method, type);
 
     return bitmap;
+}
+
+static std::string getSavePath(struct engine* engine, const FunkyBoy::ROMHeader *romHeader) {
+    ANativeActivity *nativeActivity = engine->app->activity;
+    JNIEnv *env = engine->env;
+
+    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
+    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
+    jmethodID method = env->GetMethodID(nativeActivityClass, "getSavePath", "(Ljava/lang/String;II)Ljava/lang/String;");
+
+    jstring romTitle = env->NewStringUTF(reinterpret_cast<const char*>(romHeader->title));
+    auto path = static_cast<jstring>(env->CallObjectMethod(
+            nativeActivityObj, method, romTitle,
+            romHeader->destinationCode,
+            (romHeader->globalChecksum[0] << 8) | romHeader->globalChecksum[1]
+            )
+    );
+
+    std::string savePath;
+    jboolean isCopy;
+    const char *jstr = env->GetStringUTFChars(path, &isCopy);
+    savePath = jstr;
+    env->ReleaseStringUTFChars(path, jstr);
+
+    env->DeleteLocalRef(romTitle);
+    env->DeleteLocalRef(path);
+
+    return savePath;
 }
 
 static int engine_init_display(struct engine* engine) {
@@ -144,6 +176,10 @@ static int engine_init_display(struct engine* engine) {
     uiObjTemplate.y = bufferHeight - 20;
     engine->keyStart = uiObjTemplate;
 
+    uiObjTemplate.x = (FB_GB_DISPLAY_WIDTH - 25) / 2;
+    uiObjTemplate.y = FB_GB_DISPLAY_HEIGHT + 10;
+    engine->keySave = uiObjTemplate;
+
     auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
         LOGW("Unable to set buffers geometry");
@@ -169,6 +205,25 @@ static int engine_init_display(struct engine* engine) {
     return result;
 }
 
+static void loadSaveGame(struct engine* engine) {
+    saveGamePath = getSavePath(engine, emulator->getROMHeader());
+    LOGD("Save path: %s", saveGamePath.c_str());
+    if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
+        std::ifstream file(saveGamePath, std::ios::binary | std::ios::in);
+        emulator->loadCartridgeRam(file);
+    }
+}
+
+static void saveGame() {
+    if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
+        std::ofstream file(saveGamePath, std::ios::binary | std::ios::out);
+        emulator->writeCartridgeRam(file);
+        LOGD("Cartridge RAM written to file");
+    } else {
+        LOGD("Game has no cartridge RAM");
+    }
+}
+
 /**
  * Just the current frame in the display.
  */
@@ -177,6 +232,9 @@ static void engine_draw_frame(struct engine* engine) {
     auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
     if (emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
+        if (saveGamePath.empty()) {
+            loadSaveGame(engine);
+        }
         controller->setWindow(window);
         FunkyBoy::ret_code retCode;
         do {
@@ -303,6 +361,15 @@ static void handleInputPointer(int index, AInputEvent* event, struct engine *eng
     touched = isTouched(engine->keySelect, scaledX, scaledY);
     if (touched) {
         latch |= FBA_KEY_SELECT;
+    }
+    touched = isTouched(engine->keySave, scaledX, scaledY);
+    if (touched) {
+        if (!saveRequested) {
+            saveRequested = true;
+            saveGame();
+        }
+    } else {
+        saveRequested = false;
     }
 }
 
@@ -454,6 +521,9 @@ static int handleCustomMessage(int fd, int events, void* data) {
 
     auto result = emulator->loadGame(romPath);
     LOGD("ROM load status: %d", result);
+
+    // Reset save path, it will be reloaded
+    saveGamePath = std::string();
 
     free(romPath);
     return 1;

@@ -47,6 +47,7 @@ namespace FunkyBoyAndroid {
         ui_obj keyB;
         ui_obj keyStart;
         ui_obj keySelect;
+        ui_obj keySave;
 
         float uiScale;
 

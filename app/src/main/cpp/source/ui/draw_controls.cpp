@@ -37,4 +37,7 @@ void FunkyBoyAndroid::drawControls(struct engine* engine, ANativeWindow_Buffer &
     if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 75, 10, 25, 10, engine->keySelect.x, engine->keySelect.y) != 0) {
         LOGW("Render of select key failed");
     }
+    if (bitmap != nullptr && drawBitmap(engine->env, buffer, bitmap, 75, 20, 25, 10, engine->keySave.x, engine->keySave.y) != 0) {
+        LOGW("Render of save key failed");
+    }
 }

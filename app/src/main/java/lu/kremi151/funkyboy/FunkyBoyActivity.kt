@@ -26,6 +26,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
 import com.nbsp.materialfilepicker.ui.FilePickerActivity
+import java.io.File
 import java.util.regex.Pattern
 
 class FunkyBoyActivity: NativeActivity() {
@@ -50,6 +51,13 @@ class FunkyBoyActivity: NativeActivity() {
                 .withFilter(Pattern.compile(".*\\.(gb|bin)$"))
                 .withRequestCode(REQUEST_CODE_PICK_ROM)
                 .start()
+    }
+
+    @Suppress("unused") // Used over JNI
+    fun getSavePath(romTitle: String, destinationCode: Int, globalCheckSum: Int): String {
+        val saveFolder = File(filesDir, "saves")
+        saveFolder.mkdirs()
+        return File(saveFolder, "$romTitle-$destinationCode-$globalCheckSum.sav").absolutePath
     }
 
     @Suppress("unused") // Used over JNI
