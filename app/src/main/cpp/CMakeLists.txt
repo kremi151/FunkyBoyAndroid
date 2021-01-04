@@ -65,6 +65,8 @@ add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
 include_directories("${FB_ROOT_DIR}/core/source")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/source")
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFB_DEBUG")
+
 # add lib dependencies
 target_link_libraries(fb_android
     android
