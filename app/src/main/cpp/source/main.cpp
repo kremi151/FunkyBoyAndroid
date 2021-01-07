@@ -61,8 +61,7 @@ struct timeval tp;
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
-std::string saveGamePath;
-bool saveRequested = false;
+bool initialSaveLoaded = false;
 
 static void requestPickRom(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -178,7 +177,6 @@ static int engine_init_display(struct engine* engine) {
 
     uiObjTemplate.x = (FB_GB_DISPLAY_WIDTH - 25) / 2;
     uiObjTemplate.y = FB_GB_DISPLAY_HEIGHT + 10;
-    engine->keySave = uiObjTemplate;
 
     auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
@@ -206,7 +204,9 @@ static int engine_init_display(struct engine* engine) {
 }
 
 static void loadSaveGame(struct engine* engine) {
-    saveGamePath = getSavePath(engine, emulator->getROMHeader());
+    FunkyBoy::fs::path saveGamePath = getSavePath(engine, emulator->getROMHeader());
+    emulator->savePath = saveGamePath;
+    initialSaveLoaded = true;
     LOGD("Save path: %s", saveGamePath.c_str());
     if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
         std::ifstream file(saveGamePath, std::ios::binary | std::ios::in);
@@ -215,6 +215,7 @@ static void loadSaveGame(struct engine* engine) {
 }
 
 static void saveGame() {
+    auto &saveGamePath = emulator->savePath;
     if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
         std::ofstream file(saveGamePath, std::ios::binary | std::ios::out);
         emulator->writeCartridgeRam(file);
@@ -232,7 +233,7 @@ static void engine_draw_frame(struct engine* engine) {
     auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
 
     if (emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
-        if (saveGamePath.empty()) {
+        if (!initialSaveLoaded) {
             loadSaveGame(engine);
         }
         controller->setWindow(window);
@@ -361,15 +362,6 @@ static void handleInputPointer(int index, AInputEvent* event, struct engine *eng
     touched = isTouched(engine->keySelect, scaledX, scaledY);
     if (touched) {
         latch |= FBA_KEY_SELECT;
-    }
-    touched = isTouched(engine->keySave, scaledX, scaledY);
-    if (touched) {
-        if (!saveRequested) {
-            saveRequested = true;
-            saveGame();
-        }
-    } else {
-        saveRequested = false;
     }
 }
 
@@ -522,8 +514,7 @@ static int handleCustomMessage(int fd, int events, void* data) {
     auto result = emulator->loadGame(romPath);
     LOGD("ROM load status: %d", result);
 
-    // Reset save path, it will be reloaded
-    saveGamePath = std::string();
+    initialSaveLoaded = false;
 
     free(romPath);
     return 1;

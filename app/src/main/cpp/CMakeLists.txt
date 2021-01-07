@@ -67,6 +67,8 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/source")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFB_DEBUG")
 
+fb_use_autosave(fb_core)
+
 # add lib dependencies
 target_link_libraries(fb_android
     android
