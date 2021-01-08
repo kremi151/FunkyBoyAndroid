@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef FB_ANDROID_STATE_ENGINE_H
-#define FB_ANDROID_STATE_ENGINE_H
+#ifndef FB_ANDROID_ENGINE_ENGINE_H
+#define FB_ANDROID_ENGINE_ENGINE_H
 
 #include <vector>
-#include <state/ui_obj.h>
+#include <engine/ui_obj.h>
 #include <jni.h>
 #include <android_native_app_glue.h>
 

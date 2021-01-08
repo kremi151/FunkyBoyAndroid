@@ -36,15 +36,13 @@
 #include <unistd.h>
 #include <controllers/display_android.h>
 #include <fba_util/logging.h>
-#include <state/engine.h>
+#include <engine/engine.h>
+#include <engine/init_display.h>
 #include <ui/draw_controls.h>
 #include <ui/draw_text.h>
 #include <util/frame_executor.h>
 
 #include "fb_jni.h"
-
-#define BITMAP_TYPE_BUTTONS 0
-#define BITMAP_FONT_UPPERCASE 1
 
 #define FBA_KEY_A 0b00000001
 #define FBA_KEY_B 0b00000010
@@ -64,94 +62,6 @@ std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
 bool initialSaveLoaded = false;
-
-static int engine_init_display(struct engine* engine) {
-    LOGD("engine_init_display");
-
-    ANativeWindow *window = engine->app->window;
-
-    engine->width = ANativeWindow_getWidth(window);
-    engine->height = ANativeWindow_getHeight(window);
-
-    float scale = std::max(((float)FB_GB_DISPLAY_HEIGHT) / ((float)engine->height), ((float)FB_GB_DISPLAY_WIDTH) / ((float)engine->width));
-    engine->uiScale = scale;
-    int32_t bufferWidth = std::ceil(engine->width * scale);
-    int32_t bufferHeight = std::ceil(engine->height * scale);
-    int32_t offsetX = (FB_GB_DISPLAY_WIDTH - bufferWidth) / 2;
-    int32_t offsetY = (FB_GB_DISPLAY_HEIGHT - bufferHeight) / 2;
-
-    engine->bufferWidth = bufferWidth;
-    engine->bufferHeight = bufferHeight;
-
-    uint dpadX = 10;
-    uint dpadY = bufferHeight - 90;
-
-    ui_obj uiObjTemplate;
-    uiObjTemplate.x = dpadX + 17;
-    uiObjTemplate.y = dpadY;
-    uiObjTemplate.width = 16;
-    uiObjTemplate.height = 16;
-    engine->keyUp = uiObjTemplate;
-
-    uiObjTemplate.x = dpadX + 17;
-    uiObjTemplate.y = dpadY + 34;
-    engine->keyDown = uiObjTemplate;
-
-    uiObjTemplate.x = dpadX;
-    uiObjTemplate.y = dpadY + 17;
-    engine->keyLeft = uiObjTemplate;
-
-    uiObjTemplate.x = dpadX + 34;
-    uiObjTemplate.y = dpadY + 17;
-    engine->keyRight = uiObjTemplate;
-
-    uiObjTemplate.x = bufferWidth - 30;
-    uiObjTemplate.y = bufferHeight - 90;
-    uiObjTemplate.width = 25;
-    uiObjTemplate.height = 25;
-    engine->keyA = uiObjTemplate;
-
-    uiObjTemplate.x = bufferWidth - 60;
-    uiObjTemplate.y = bufferHeight - 60;
-    engine->keyB = uiObjTemplate;
-
-    uiObjTemplate.width = 25;
-    uiObjTemplate.height = 10;
-    uiObjTemplate.x = (bufferWidth / 2) - 35;
-    uiObjTemplate.y = bufferHeight - 20;
-    engine->keySelect = uiObjTemplate;
-
-    uiObjTemplate.x = (bufferWidth / 2) + 10;
-    uiObjTemplate.y = bufferHeight - 20;
-    engine->keyStart = uiObjTemplate;
-
-    uiObjTemplate.x = (FB_GB_DISPLAY_WIDTH - 25) / 2;
-    uiObjTemplate.y = FB_GB_DISPLAY_HEIGHT + 10;
-
-    auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
-    if (result != 0) {
-        LOGW("Unable to set buffers geometry");
-    }
-
-    jobject bitmap = loadBitmap(engine, BITMAP_TYPE_BUTTONS);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapButtons = bitmap;
-    } else {
-        LOGW("Unable to load buttons texture bitmap");
-    }
-    bitmap = loadBitmap(engine, BITMAP_FONT_UPPERCASE);
-    if (bitmap != nullptr) {
-        bitmap = engine->env->NewGlobalRef(bitmap);
-        engine->bitmapFontsUppercase = bitmap;
-    } else {
-        LOGW("Unable to load uppercase font bitmap");
-    }
-
-    engine->keyLatch = 0;
-
-    return result;
-}
 
 static void loadSaveGame(struct engine* engine) {
     FunkyBoy::fs::path saveGamePath = getSavePath(engine, emulator->getROMHeader());
@@ -425,7 +335,7 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             LOGD("CMD: APP_CMD_INIT_WINDOW");
             engine->activePointerIds.clear();
             if (engine->app->window != nullptr) {
-                engine_init_display(engine);
+                Engine::initDisplay(engine);
                 engine_draw_frame(engine);
             }
             break;

@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Michel Kremer (kremi151)
+ * Copyright 2020 Michel Kremer (kremi151)
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef FB_ANDROID_JNI_H
-#define FB_ANDROID_JNI_H
+#ifndef FB_ANDROID_ENGINE_UI_OBJ_H
+#define FB_ANDROID_ENGINE_UI_OBJ_H
 
-#include <jni.h>
-#include <string>
-#include <cartridge/header.h>
-#include <engine/engine.h>
-
-extern int fbMsgPipe[2];
+#include <cstdlib>
 
 namespace FunkyBoyAndroid {
 
-    void requestPickRom(struct engine* engine);
-    jobject loadBitmap(struct engine* engine, jint type);
-    std::string getSavePath(struct engine* engine, const FunkyBoy::ROMHeader *romHeader);
+    typedef struct {
+        uint x;
+        uint y;
+        uint width;
+        uint height;
+    } ui_obj;
 
 }
 
-#endif //FB_ANDROID_JNI_H
+#endif

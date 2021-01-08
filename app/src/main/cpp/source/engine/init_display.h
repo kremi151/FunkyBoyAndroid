@@ -1,5 +1,5 @@
 /**
- * Copyright 2020 Michel Kremer (kremi151)
+ * Copyright 2021 Michel Kremer (kremi151)
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef FB_ANDROID_STATE_UI_OBJ_H
-#define FB_ANDROID_STATE_UI_OBJ_H
+#ifndef FB_ANDROID_INIT_DISPLAY_H
+#define FB_ANDROID_INIT_DISPLAY_H
 
-#include <cstdlib>
+#include <engine/engine.h>
 
-namespace FunkyBoyAndroid {
+namespace FunkyBoyAndroid::Engine {
 
-    typedef struct {
-        uint x;
-        uint y;
-        uint width;
-        uint height;
-    } ui_obj;
+    int initDisplay(struct engine* engine);
 
 }
 
-#endif
+#endif //FB_ANDROID_INIT_DISPLAY_H
