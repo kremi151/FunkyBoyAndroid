@@ -41,6 +41,8 @@
 #include <ui/draw_text.h>
 #include <util/frame_executor.h>
 
+#include "fb_jni.h"
+
 #define BITMAP_TYPE_BUTTONS 0
 #define BITMAP_FONT_UPPERCASE 1
 
@@ -55,65 +57,13 @@
 
 using namespace FunkyBoyAndroid;
 
-static int msgPipe[2];
+int fbMsgPipe[2];
 struct timeval tp;
 
 std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
 bool initialSaveLoaded = false;
-
-static void requestPickRom(struct engine* engine) {
-    ANativeActivity *nativeActivity = engine->app->activity;
-    JNIEnv *env = engine->env;
-
-    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
-    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    jmethodID method = env->GetMethodID(nativeActivityClass, "requestPickRom", "()V");
-
-    env->CallVoidMethod(nativeActivityObj, method);
-}
-
-static jobject loadBitmap(struct engine* engine, jint type) {
-    ANativeActivity *nativeActivity = engine->app->activity;
-    JNIEnv *env = engine->env;
-
-    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
-    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    jmethodID method = env->GetMethodID(nativeActivityClass, "loadBitmap", "(I)Landroid/graphics/Bitmap;");
-
-    jobject bitmap = env->CallObjectMethod(nativeActivityObj, method, type);
-
-    return bitmap;
-}
-
-static std::string getSavePath(struct engine* engine, const FunkyBoy::ROMHeader *romHeader) {
-    ANativeActivity *nativeActivity = engine->app->activity;
-    JNIEnv *env = engine->env;
-
-    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
-    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    jmethodID method = env->GetMethodID(nativeActivityClass, "getSavePath", "(Ljava/lang/String;II)Ljava/lang/String;");
-
-    jstring romTitle = env->NewStringUTF(reinterpret_cast<const char*>(romHeader->title));
-    auto path = static_cast<jstring>(env->CallObjectMethod(
-            nativeActivityObj, method, romTitle,
-            romHeader->destinationCode,
-            (romHeader->globalChecksum[0] << 8) | romHeader->globalChecksum[1]
-            )
-    );
-
-    std::string savePath;
-    jboolean isCopy;
-    const char *jstr = env->GetStringUTFChars(path, &isCopy);
-    savePath = jstr;
-    env->ReleaseStringUTFChars(path, jstr);
-
-    env->DeleteLocalRef(romTitle);
-    env->DeleteLocalRef(path);
-
-    return savePath;
-}
 
 static int engine_init_display(struct engine* engine) {
     LOGD("engine_init_display");
@@ -559,8 +509,8 @@ void android_main(struct android_app* state) {
         // engine.state = *(struct saved_state*)state->savedState;
     }
 
-    pipe(msgPipe);
-    ALooper_addFd(state->looper, msgPipe[0], ALOOPER_POLL_CALLBACK , ALOOPER_EVENT_INPUT, handleCustomMessage, state);
+    pipe(fbMsgPipe);
+    ALooper_addFd(state->looper, fbMsgPipe[0], ALOOPER_POLL_CALLBACK , ALOOPER_EVENT_INPUT, handleCustomMessage, state);
 
     FunkyBoy::Util::FrameExecutor executeFrame([&engine](){
         engine_draw_frame(&engine);
@@ -596,20 +546,6 @@ void android_main(struct android_app* state) {
     }
 
     jvm->DetachCurrentThread();
-}
-
-extern "C" {
-    JNIEXPORT void JNICALL Java_lu_kremi151_funkyboy_FunkyBoyActivity_romPicked(JNIEnv *env, jobject, jstring path) {
-        jboolean isCopy;
-        auto path_cstr = env->GetStringUTFChars(path, &isCopy);
-
-        size_t strln = strlen(path_cstr);
-
-        write(msgPipe[1], reinterpret_cast<char *>(&strln), sizeof(size_t));
-        write(msgPipe[1], path_cstr, strln);
-
-        env->ReleaseStringUTFChars(path, path_cstr);
-    }
 }
 
 //END_INCLUDE(all)

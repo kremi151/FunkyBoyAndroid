@@ -40,6 +40,7 @@ set(CMAKE_SHARED_LINKER_FLAGS
 
 set(SOURCES
         source/main.cpp
+        source/fb_jni.cpp
         source/ui/draw_bitmap.cpp
         source/ui/draw_controls.cpp
         source/ui/draw_text.cpp
@@ -47,6 +48,7 @@ set(SOURCES
         )
 
 set(HEADERS
+        source/fb_jni.h
         source/fba_util/logging.h
         source/state/engine.h
         source/state/ui_obj.h

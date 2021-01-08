@@ -20,6 +20,7 @@
 #include <vector>
 #include <state/ui_obj.h>
 #include <jni.h>
+#include <android_native_app_glue.h>
 
 namespace FunkyBoyAndroid {
 
