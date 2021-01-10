@@ -51,7 +51,10 @@ std::string FunkyBoyAndroid::getSavePath(struct engine* engine, const FunkyBoy::
     jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
     jmethodID method = env->GetMethodID(nativeActivityClass, "getSavePath", "(Ljava/lang/String;II)Ljava/lang/String;");
 
-    jstring romTitle = env->NewStringUTF(reinterpret_cast<const char*>(romHeader->title));
+    char romTitleSafe[FB_ROM_HEADER_TITLE_BYTES + 1]{};
+    std::memcpy(romTitleSafe, romHeader->title, FB_ROM_HEADER_TITLE_BYTES);
+
+    jstring romTitle = env->NewStringUTF(romTitleSafe);
     auto path = static_cast<jstring>(env->CallObjectMethod(
             nativeActivityObj, method, romTitle,
             romHeader->destinationCode,
