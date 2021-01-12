@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FunkyBoy</string>
+    <string name="confirm_back">Press back again to close %s</string>
 </resources>

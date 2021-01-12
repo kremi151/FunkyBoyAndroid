@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
@@ -41,6 +42,7 @@ class FunkyBoyActivity: NativeActivity() {
     }
 
     private var awaitingPickRomResult = false
+    private var lastBackPressed = 0L
 
     private external fun romPicked(path: String)
 
@@ -110,6 +112,17 @@ class FunkyBoyActivity: NativeActivity() {
             } else {
                 awaitingPickRomResult = false
             }
+        }
+    }
+
+    override fun onBackPressed() {
+        val now = System.currentTimeMillis()
+        if (now - lastBackPressed > 2000L) {
+            lastBackPressed = now
+            val text = getString(R.string.confirm_back, getString(R.string.app_name))
+            Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+        } else {
+            super.onBackPressed()
         }
     }
 
