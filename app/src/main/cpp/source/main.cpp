@@ -262,7 +262,12 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     switch (flags) {
         case AMOTION_EVENT_ACTION_DOWN:
             // For AMOTION_EVENT_ACTION_DOWN, only the primary pointer is involved
-            activePointerIds.push_back(AMotionEvent_getPointerId(event, 0));
+            if (activePointerIds.empty()) {
+                // For some reason, it may happen that AMOTION_EVENT_ACTION_DOWN is called
+                // sequentially without a AMOTION_EVENT_ACTION_UP.
+                // With this we do some basic deduplication to avoid sticky inputs
+                activePointerIds.push_back(AMotionEvent_getPointerId(event, 0));
+            }
             break;
         case AMOTION_EVENT_ACTION_POINTER_DOWN: {
             uint32_t pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
@@ -271,7 +276,9 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
         }
         case AMOTION_EVENT_ACTION_UP:
             // FILO: First in, last out (primary pointer)
-            activePointerIds.pop_back();
+            if (!activePointerIds.empty()) {
+                activePointerIds.pop_back();
+            }
             break;
         case AMOTION_EVENT_ACTION_POINTER_UP: {
             uint pointerId = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
