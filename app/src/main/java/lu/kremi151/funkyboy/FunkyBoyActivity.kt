@@ -22,6 +22,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -57,9 +59,26 @@ class FunkyBoyActivity: NativeActivity() {
 
     @Suppress("unused") // Used over JNI
     fun getSavePath(romTitle: String, destinationCode: Int, globalCheckSum: Int): String {
-        val saveFolder = File(filesDir, "saves")
-        saveFolder.mkdirs()
-        return File(saveFolder, "$romTitle-$destinationCode-$globalCheckSum.sav").absolutePath
+        val saveName = "$romTitle-$destinationCode-$globalCheckSum.sav"
+
+        val internalSaveFolder = File(filesDir, "saves")
+        internalSaveFolder.mkdirs()
+
+        val internalSaveFile = File(internalSaveFolder, saveName)
+        if (internalSaveFile.exists()) {
+            Log.d("funkyboy", "Loading existing save from internal storage")
+            return internalSaveFile.absolutePath
+        }
+
+        if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
+            Log.d("funkyboy", "Loading save from external storage")
+            val externalSaveFolder = File(getExternalFilesDir(null), "saves")
+            externalSaveFolder.mkdirs()
+            return File(externalSaveFolder, saveName).absolutePath
+        }
+
+        Log.d("funkyboy", "Loading save from internal storage")
+        return internalSaveFile.absolutePath
     }
 
     @Suppress("unused") // Used over JNI
