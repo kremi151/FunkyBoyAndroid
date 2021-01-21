@@ -11,6 +11,11 @@ buildscript {
     }
 }
 
+ext {
+    versionCode = 1
+    versionName = "1.0"
+}
+
 allprojects {
     repositories {
         google()

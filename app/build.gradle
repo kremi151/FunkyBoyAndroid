@@ -9,6 +9,8 @@ android {
         applicationId = 'lu.kremi151.funkyboy'
         minSdkVersion 19
         targetSdkVersion 29
+        versionCode rootProject.versionCode
+        versionName rootProject.versionName
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_shared'
