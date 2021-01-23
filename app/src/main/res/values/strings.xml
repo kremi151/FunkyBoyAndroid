@@ -2,4 +2,13 @@
 <resources>
     <string name="app_name">FunkyBoy</string>
     <string name="confirm_back">Press back again to close %s</string>
+    <string name="no_rom_loaded">No ROM loaded</string>
+    <string name="rom_not_readable">ROM not readable</string>
+    <string name="rom_not_parsable">ROM not parsable</string>
+    <string name="rom_too_big">ROM is too big</string>
+    <string name="rom_size_mismatch">ROM size mismatch</string>
+    <string name="unsupported_mbc">Unsupported MBC</string>
+    <string name="unsupported_ram_size">Unsupported RAM size</string>
+    <string name="unknown_status">Unknown status</string>
+    <string name="press_start">PRESS START!</string>
 </resources>

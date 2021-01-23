@@ -41,6 +41,7 @@
 #include <ui/draw_controls.h>
 #include <ui/draw_text.h>
 #include <util/frame_executor.h>
+#include <fb_app_strings.h>
 
 #include "fb_jni.h"
 
@@ -63,6 +64,18 @@ std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
 bool initialSaveLoaded = false;
 
+struct {
+    std::string noRomLoaded;
+    std::string romNotReadable;
+    std::string romNotParsable;
+    std::string romTooBig;
+    std::string romSizeMismatch;
+    std::string unsupportedMBC;
+    std::string unsupportedRAMSize;
+    std::string unknownStatus;
+    std::string pressStart;
+} fb_strings;
+
 static void loadSaveGame(struct engine* engine) {
     FunkyBoy::fs::path saveGamePath = getSavePath(engine, emulator->getROMHeader());
     emulator->savePath = saveGamePath;
@@ -83,6 +96,22 @@ static void saveGame() {
     } else {
         LOGD("Game has no cartridge RAM");
     }
+}
+
+namespace FunkyBoyAndroid {
+
+    void reloadStrings(JNIEnv *env, ANativeActivity *nativeActivity) {
+        fb_strings.noRomLoaded = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::no_rom_loaded);
+        fb_strings.romNotReadable = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::rom_not_readable);
+        fb_strings.romNotParsable = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::rom_not_parsable);
+        fb_strings.romTooBig = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::rom_too_big);
+        fb_strings.romSizeMismatch = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::rom_size_mismatch);
+        fb_strings.unsupportedMBC = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_mbc);
+        fb_strings.unsupportedRAMSize = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_ram_size);
+        fb_strings.unknownStatus = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unknown_status);
+        fb_strings.pressStart = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::press_start);
+    }
+
 }
 
 /**
@@ -119,31 +148,31 @@ static void engine_draw_frame(struct engine* engine) {
         // Draw ROM status
         switch (emulator->getCartridgeStatus()) {
             case FunkyBoy::NoROMLoaded:
-                text = "No ROM loaded";
+                text = fb_strings.noRomLoaded.c_str();
                 break;
             case FunkyBoy::ROMFileNotReadable:
-                text = "ROM not readable";
+                text = fb_strings.romNotReadable.c_str();
                 break;
             case FunkyBoy::ROMParseError:
-                text = "ROM not parsable";
+                text = fb_strings.romNotParsable.c_str();
                 break;
             case FunkyBoy::ROMTooBig:
-                text = "ROM is too big";
+                text = fb_strings.romTooBig.c_str();
                 break;
             case FunkyBoy::ROMSizeMismatch:
-                text = "ROM size mismatch";
+                text = fb_strings.romSizeMismatch.c_str();
                 break;
             case FunkyBoy::ROMUnsupportedMBC:
-                text = "Unsupported MBC";
+                text = fb_strings.unsupportedMBC.c_str();
                 break;
             case FunkyBoy::RAMSizeUnsupported:
-                text = "Unsupported RAM size";
+                text = fb_strings.unsupportedRAMSize.c_str();
                 break;
             case FunkyBoy::Loaded:
                 text = "";
                 break;
             default:
-                text = "Unknown status";
+                text = fb_strings.unknownStatus.c_str();
                 break;
         }
         size_t text_width = measureTextWidth(text, 0);
@@ -152,7 +181,7 @@ static void engine_draw_frame(struct engine* engine) {
         // Draw headline
         gettimeofday(&tp, nullptr);
         if (tp.tv_sec % 2 == 1) {
-            text = "PRESS START!";
+            text = fb_strings.pressStart.c_str();
             text_width = measureTextWidth(text, 0);
             drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
         }
@@ -414,6 +443,8 @@ void android_main(struct android_app* state) {
         return;
     }
     engine.env = env;
+
+    FunkyBoyAndroid::reloadStrings(env, state->activity);
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);

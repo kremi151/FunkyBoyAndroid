@@ -111,6 +111,11 @@ class FunkyBoyActivity: NativeActivity() {
         }
     }
 
+    @Suppress("unused") // Used over JNI
+    fun getStringByName(name: String): String {
+        return resources.getString(resources.getIdentifier(name, "string", packageName))
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_PICK_ROM) {

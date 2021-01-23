@@ -25,6 +25,8 @@ set(FB_ROOT_DIR ${CMAKE_SOURCE_DIR}/funkyboy)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${FB_ROOT_DIR}/cmake-common)
 
+include(jni_adhesive.cmake)
+
 # build native_app_glue as a static lib
 set(${CMAKE_C_FLAGS}, "${CMAKE_C_FLAGS}")
 add_library(native_app_glue STATIC
@@ -60,14 +62,19 @@ set(HEADERS
         source/controllers/display_android.h
         )
 
-add_library(fb_android SHARED ${SOURCES} ${HEADERS})
+fb_generate_strings_cpp()
+
+add_library(fb_android SHARED ${SOURCES} ${HEADERS} ${FB_ANDROID_DYNAMIC_SOURCES})
 
 target_include_directories(fb_android PRIVATE
     ${ANDROID_NDK}/sources/android/native_app_glue)
 
 add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
-include_directories("${FB_ROOT_DIR}/core/source")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/source")
+include_directories(
+        "${FB_ROOT_DIR}/core/source"
+        "${CMAKE_CURRENT_SOURCE_DIR}/source"
+        ${FB_ANDROID_DYNAMIC_INCLUDE_DIR}
+)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFB_DEBUG")
 
