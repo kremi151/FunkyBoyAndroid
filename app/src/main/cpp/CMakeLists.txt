@@ -67,14 +67,13 @@ fb_generate_strings_cpp()
 add_library(fb_android SHARED ${SOURCES} ${HEADERS} ${FB_ANDROID_DYNAMIC_SOURCES})
 
 target_include_directories(fb_android PRIVATE
-    ${ANDROID_NDK}/sources/android/native_app_glue)
+    ${ANDROID_NDK}/sources/android/native_app_glue
+    "${FB_ROOT_DIR}/core/source"
+    "${CMAKE_CURRENT_SOURCE_DIR}/source"
+    ${FB_ANDROID_DYNAMIC_INCLUDE_DIR}
+    )
 
 add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
-include_directories(
-        "${FB_ROOT_DIR}/core/source"
-        "${CMAKE_CURRENT_SOURCE_DIR}/source"
-        ${FB_ANDROID_DYNAMIC_INCLUDE_DIR}
-)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFB_DEBUG")
 
