@@ -36,11 +36,13 @@
 #include <unistd.h>
 #include <controllers/display_android.h>
 #include <fba_util/logging.h>
+#include <fba_util/saved_state.h>
 #include <engine/engine.h>
 #include <engine/init_display.h>
 #include <ui/draw_controls.h>
 #include <ui/draw_text.h>
 #include <util/frame_executor.h>
+#include <util/membuf.h>
 #include <fb_app_strings.h>
 
 #include "fb_jni.h"
@@ -63,6 +65,7 @@ std::unique_ptr<FunkyBoy::Emulator> emulator;
 std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
 bool initialSaveLoaded = false;
+std::string romPath;
 
 struct {
     std::string noRomLoaded;
@@ -110,6 +113,49 @@ namespace FunkyBoyAndroid {
         fb_strings.unsupportedRAMSize = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_ram_size);
         fb_strings.unknownStatus = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unknown_status);
         fb_strings.pressStart = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::press_start);
+    }
+
+    FunkyBoy::CartridgeStatus loadROM(const char *inRomPath) {
+        auto result = emulator->loadGame(inRomPath);
+        LOGD("ROM load status: %d, loaded from %s", result, inRomPath);
+        if (result == FunkyBoy::CartridgeStatus::Loaded) {
+            romPath = inRomPath;
+        }
+        return result;
+    }
+
+    void serializeState(app_save_state *state) {
+        if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+            LOGD("No ROM loaded, skipping serialization");
+            return;
+        }
+
+        if (romPath.size() < FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE) {
+            std::strcpy(state->romPath, romPath.c_str());
+        } else {
+            LOGW("ROM path size is too large, cannot be serialized\n");
+        }
+
+        FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, false);
+        std::ostream ostream(&membuf);
+        emulator->saveState(ostream);
+    }
+
+    void resumeFromState(app_save_state *state) {
+        if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+            if (std::strlen(state->romPath) == 0) {
+                LOGW("ROM path was not serialized, not resuming from previous state");
+                return;
+            }
+            if (FunkyBoyAndroid::loadROM(state->romPath) != FunkyBoy::CartridgeStatus::Loaded) {
+                LOGE("ROM could not be loaded, resuming from previous state failed");
+                return;
+            }
+        }
+        FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, true);
+        std::istream istream(&membuf);
+        emulator->loadState(istream);
+        LOGD("Resumed emulation from previous state");
     }
 
 }
@@ -358,14 +404,20 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
 static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     auto* engine = (struct engine*)app->userData;
     switch (cmd) {
-        case APP_CMD_SAVE_STATE:
+        case APP_CMD_SAVE_STATE: {
             LOGD("CMD: APP_CMD_SAVE_STATE");
             // The system has asked us to save our current state.  Do so.
-            // TODO: Save state
-            /* engine->app->savedState = malloc(sizeof(struct saved_state));
-            *((struct saved_state*)engine->app->savedState) = engine->state;
-            engine->app->savedStateSize = sizeof(struct saved_state); */
+            auto *state = static_cast<app_save_state *>(calloc(
+                    sizeof(FunkyBoyAndroid::app_save_state), sizeof(char)));
+
+            FunkyBoyAndroid::serializeState(state);
+
+            engine->app->savedState = state;
+            engine->app->savedStateSize = sizeof(FunkyBoyAndroid::app_save_state);
+
+            LOGD("Emulation state has been serialized");
             break;
+        }
         case APP_CMD_INIT_WINDOW:
             // The window is being shown, get it ready.
             LOGD("CMD: APP_CMD_INIT_WINDOW");
@@ -402,17 +454,15 @@ static int handleCustomMessage(int fd, int events, void* data) {
     size_t strln;
     read(fd, reinterpret_cast<char *>(&strln), sizeof(size_t));
 
-    char *romPath = (char*) calloc(strln + 1, sizeof(char));
-    read(fd, romPath, strln);
+    char *inRomPath = (char*) calloc(strln + 1, sizeof(char));
+    read(fd, inRomPath, strln);
 
-    LOGD("RECV rom path: %s", romPath);
-
-    auto result = emulator->loadGame(romPath);
-    LOGD("ROM load status: %d", result);
+    LOGD("RECV rom path: %s", inRomPath);
+    FunkyBoyAndroid::loadROM(inRomPath);
 
     initialSaveLoaded = false;
 
-    free(romPath);
+    free(inRomPath);
     return 1;
 }
 
@@ -453,8 +503,8 @@ void android_main(struct android_app* state) {
 
     if (state->savedState != nullptr) {
         // We are starting with a previous saved state; restore from it.
-        // TODO: Restore state
-        // engine.state = *(struct saved_state*)state->savedState;
+        auto savedState = static_cast<FunkyBoyAndroid::app_save_state*>(state->savedState);
+        FunkyBoyAndroid::resumeFromState(savedState);
     }
 
     pipe(fbMsgPipe);
