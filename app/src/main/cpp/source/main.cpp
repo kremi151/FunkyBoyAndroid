@@ -37,6 +37,7 @@
 #include <controllers/display_android.h>
 #include <fba_util/logging.h>
 #include <fba_util/saved_state.h>
+#include <fba_util/shared.h>
 #include <engine/engine.h>
 #include <engine/init_display.h>
 #include <ui/draw_controls.h>
@@ -61,11 +62,13 @@ using namespace FunkyBoyAndroid;
 int fbMsgPipe[2];
 struct timeval tp;
 
-std::unique_ptr<FunkyBoy::Emulator> emulator;
-std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
+namespace FunkyBoyAndroid::State {
+    std::unique_ptr<FunkyBoy::Emulator> emulator;
+    std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
 
-bool initialSaveLoaded = false;
-std::string romPath;
+    bool initialSaveLoaded = false;
+    std::string romPath;
+}
 
 struct {
     std::string noRomLoaded;
@@ -79,29 +82,29 @@ struct {
     std::string pressStart;
 } fb_strings;
 
-static void loadSaveGame(struct engine* engine) {
-    FunkyBoy::fs::path saveGamePath = getSavePath(engine, emulator->getROMHeader());
-    emulator->savePath = saveGamePath;
-    initialSaveLoaded = true;
-    LOGD("Save path: %s", saveGamePath.c_str());
-    if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
-        std::ifstream file(saveGamePath, std::ios::binary | std::ios::in);
-        emulator->loadCartridgeRam(file);
-    }
-}
-
-static void saveGame() {
-    auto &saveGamePath = emulator->savePath;
-    if (!saveGamePath.empty() && emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
-        std::ofstream file(saveGamePath, std::ios::binary | std::ios::out);
-        emulator->writeCartridgeRam(file);
-        LOGD("Cartridge RAM written to file");
-    } else {
-        LOGD("Game has no cartridge RAM");
-    }
-}
-
 namespace FunkyBoyAndroid {
+
+    static void loadSaveGame(struct engine* engine) {
+        FunkyBoy::fs::path saveGamePath = getSavePath(engine, State::emulator->getROMHeader());
+        State::emulator->savePath = saveGamePath;
+        State::initialSaveLoaded = true;
+        LOGD("Save path: %s", saveGamePath.c_str());
+        if (!saveGamePath.empty() && State::emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
+            std::ifstream file(saveGamePath, std::ios::binary | std::ios::in);
+            State::emulator->loadCartridgeRam(file);
+        }
+    }
+
+    static void saveGame() {
+        auto &saveGamePath = State::emulator->savePath;
+        if (!saveGamePath.empty() && State::emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
+            std::ofstream file(saveGamePath, std::ios::binary | std::ios::out);
+            State::emulator->writeCartridgeRam(file);
+            LOGD("Cartridge RAM written to file");
+        } else {
+            LOGD("Game has no cartridge RAM");
+        }
+    }
 
     void reloadStrings(JNIEnv *env, ANativeActivity *nativeActivity) {
         fb_strings.noRomLoaded = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::no_rom_loaded);
@@ -116,33 +119,33 @@ namespace FunkyBoyAndroid {
     }
 
     FunkyBoy::CartridgeStatus loadROM(const char *inRomPath) {
-        auto result = emulator->loadGame(inRomPath);
+        auto result = State::emulator->loadGame(inRomPath);
         LOGD("ROM load status: %d, loaded from %s", result, inRomPath);
         if (result == FunkyBoy::CartridgeStatus::Loaded) {
-            romPath = inRomPath;
+            State::romPath = inRomPath;
         }
         return result;
     }
 
     void serializeState(app_save_state *state) {
-        if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+        if (State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
             LOGD("No ROM loaded, skipping serialization");
             return;
         }
 
-        if (romPath.size() < FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE) {
-            std::strcpy(state->romPath, romPath.c_str());
+        if (State::romPath.size() < FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE) {
+            std::strcpy(state->romPath, State::romPath.c_str());
         } else {
             LOGW("ROM path size is too large, cannot be serialized\n");
         }
 
         FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, false);
         std::ostream ostream(&membuf);
-        emulator->saveState(ostream);
+        State::emulator->saveState(ostream);
     }
 
     void resumeFromState(app_save_state *state) {
-        if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+        if (State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
             if (std::strlen(state->romPath) == 0) {
                 LOGW("ROM path was not serialized, not resuming from previous state");
                 return;
@@ -154,7 +157,7 @@ namespace FunkyBoyAndroid {
         }
         FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, true);
         std::istream istream(&membuf);
-        emulator->loadState(istream);
+        State::emulator->loadState(istream);
         LOGD("Resumed emulation from previous state");
     }
 
@@ -165,16 +168,16 @@ namespace FunkyBoyAndroid {
  */
 static void engine_draw_frame(struct engine* engine) {
     ANativeWindow *window = engine->app->window;
-    auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(emuDisplayController.get());
+    auto controller = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(FunkyBoyAndroid::State::emuDisplayController.get());
 
-    if (emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
-        if (!initialSaveLoaded) {
+    if (FunkyBoyAndroid::State::emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded) {
+        if (!FunkyBoyAndroid::State::initialSaveLoaded) {
             loadSaveGame(engine);
         }
         controller->setWindow(window);
         FunkyBoy::ret_code retCode;
         do {
-            retCode = emulator->doTick();
+            retCode = FunkyBoyAndroid::State::emulator->doTick();
         } while ((retCode & FB_RET_NEW_FRAME) == 0);
         controller->setWindow(nullptr);
     } else {
@@ -192,7 +195,7 @@ static void engine_draw_frame(struct engine* engine) {
         const char *text;
 
         // Draw ROM status
-        switch (emulator->getCartridgeStatus()) {
+        switch (FunkyBoyAndroid::State::emulator->getCartridgeStatus()) {
             case FunkyBoy::NoROMLoaded:
                 text = fb_strings.noRomLoaded.c_str();
                 break;
@@ -321,7 +324,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     int action = AMotionEvent_getAction(event);
     uint flags = action & AMOTION_EVENT_ACTION_MASK;
 
-    if (emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+    if (FunkyBoyAndroid::State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
         if (flags == AMOTION_EVENT_ACTION_DOWN) {
             float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
             float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
@@ -384,14 +387,14 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
     }
 
     if (keyLatch != engine->keyLatch) {
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_A, keyLatch & FBA_KEY_A);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_B, keyLatch & FBA_KEY_B);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_START, keyLatch & FBA_KEY_START);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_SELECT, keyLatch & FBA_KEY_SELECT);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_LEFT, keyLatch & FBA_KEY_LEFT);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_UP, keyLatch & FBA_KEY_UP);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_RIGHT, keyLatch & FBA_KEY_RIGHT);
-        emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_DOWN, keyLatch & FBA_KEY_DOWN);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_A, keyLatch & FBA_KEY_A);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_B, keyLatch & FBA_KEY_B);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_START, keyLatch & FBA_KEY_START);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_SELECT, keyLatch & FBA_KEY_SELECT);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_LEFT, keyLatch & FBA_KEY_LEFT);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_UP, keyLatch & FBA_KEY_UP);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_RIGHT, keyLatch & FBA_KEY_RIGHT);
+        FunkyBoyAndroid::State::emulator->setInputState(FunkyBoy::Controller::JoypadKey::JOYPAD_DOWN, keyLatch & FBA_KEY_DOWN);
         engine->keyLatch = keyLatch;
     }
 
@@ -450,20 +453,24 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     }
 }
 
-static int handleCustomMessage(int fd, int events, void* data) {
-    size_t strln;
-    read(fd, reinterpret_cast<char *>(&strln), sizeof(size_t));
+namespace FunkyBoyAndroid {
 
-    char *inRomPath = (char*) calloc(strln + 1, sizeof(char));
-    read(fd, inRomPath, strln);
+    static int handleCustomMessage(int fd, int events, void *data) {
+        size_t strln;
+        read(fd, reinterpret_cast<char *>(&strln), sizeof(size_t));
 
-    LOGD("RECV rom path: %s", inRomPath);
-    FunkyBoyAndroid::loadROM(inRomPath);
+        char *inRomPath = (char *) calloc(strln + 1, sizeof(char));
+        read(fd, inRomPath, strln);
 
-    initialSaveLoaded = false;
+        LOGD("RECV rom path: %s", inRomPath);
+        loadROM(inRomPath);
 
-    free(inRomPath);
-    return 1;
+        State::initialSaveLoaded = false;
+
+        free(inRomPath);
+        return 1;
+    }
+
 }
 
 /**
@@ -497,9 +504,9 @@ void android_main(struct android_app* state) {
     FunkyBoyAndroid::reloadStrings(env, state->activity);
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
-    emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
-    controllers->setDisplay(emuDisplayController);
-    emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
+    FunkyBoyAndroid::State::emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
+    controllers->setDisplay(FunkyBoyAndroid::State::emuDisplayController);
+    FunkyBoyAndroid::State::emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     if (state->savedState != nullptr) {
         // We are starting with a previous saved state; restore from it.

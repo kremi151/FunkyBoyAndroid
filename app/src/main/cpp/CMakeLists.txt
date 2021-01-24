@@ -54,6 +54,7 @@ set(HEADERS
         source/fb_jni.h
         source/fba_util/logging.h
         source/fba_util/saved_state.h
+        source/fba_util/shared.h
         source/engine/engine.h
         source/engine/ui_obj.h
         source/engine/init_display.h
