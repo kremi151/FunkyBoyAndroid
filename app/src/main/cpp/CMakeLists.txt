@@ -43,6 +43,8 @@ set(CMAKE_SHARED_LINKER_FLAGS
 set(SOURCES
         source/main.cpp
         source/fb_jni.cpp
+        source/fba_util/app_state.cpp
+        source/fba_util/emulator_state.cpp
         source/engine/init_display.cpp
         source/ui/draw_bitmap.cpp
         source/ui/draw_controls.cpp
@@ -53,7 +55,8 @@ set(SOURCES
 set(HEADERS
         source/fb_jni.h
         source/fba_util/logging.h
-        source/fba_util/saved_state.h
+        source/fba_util/app_state.h
+        source/fba_util/emulator_state.h
         source/fba_util/shared.h
         source/engine/engine.h
         source/engine/ui_obj.h

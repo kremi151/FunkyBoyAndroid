@@ -36,7 +36,8 @@
 #include <unistd.h>
 #include <controllers/display_android.h>
 #include <fba_util/logging.h>
-#include <fba_util/saved_state.h>
+#include <fba_util/app_state.h>
+#include <fba_util/emulator_state.h>
 #include <fba_util/shared.h>
 #include <engine/engine.h>
 #include <engine/init_display.h>
@@ -84,28 +85,6 @@ struct {
 
 namespace FunkyBoyAndroid {
 
-    static void loadSaveGame(struct engine* engine) {
-        FunkyBoy::fs::path saveGamePath = getSavePath(engine, State::emulator->getROMHeader());
-        State::emulator->savePath = saveGamePath;
-        State::initialSaveLoaded = true;
-        LOGD("Save path: %s", saveGamePath.c_str());
-        if (!saveGamePath.empty() && State::emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
-            std::ifstream file(saveGamePath, std::ios::binary | std::ios::in);
-            State::emulator->loadCartridgeRam(file);
-        }
-    }
-
-    static void saveGame() {
-        auto &saveGamePath = State::emulator->savePath;
-        if (!saveGamePath.empty() && State::emulator->supportsSaving() /*&& FunkyBoy::fs::exists(saveGamePath)*/) {
-            std::ofstream file(saveGamePath, std::ios::binary | std::ios::out);
-            State::emulator->writeCartridgeRam(file);
-            LOGD("Cartridge RAM written to file");
-        } else {
-            LOGD("Game has no cartridge RAM");
-        }
-    }
-
     void reloadStrings(JNIEnv *env, ANativeActivity *nativeActivity) {
         fb_strings.noRomLoaded = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::no_rom_loaded);
         fb_strings.romNotReadable = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::rom_not_readable);
@@ -116,49 +95,6 @@ namespace FunkyBoyAndroid {
         fb_strings.unsupportedRAMSize = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_ram_size);
         fb_strings.unknownStatus = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unknown_status);
         fb_strings.pressStart = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::press_start);
-    }
-
-    FunkyBoy::CartridgeStatus loadROM(const char *inRomPath) {
-        auto result = State::emulator->loadGame(inRomPath);
-        LOGD("ROM load status: %d, loaded from %s", result, inRomPath);
-        if (result == FunkyBoy::CartridgeStatus::Loaded) {
-            State::romPath = inRomPath;
-        }
-        return result;
-    }
-
-    void serializeState(app_save_state *state) {
-        if (State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
-            LOGD("No ROM loaded, skipping serialization");
-            return;
-        }
-
-        if (State::romPath.size() < FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE) {
-            std::strcpy(state->romPath, State::romPath.c_str());
-        } else {
-            LOGW("ROM path size is too large, cannot be serialized\n");
-        }
-
-        FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, false);
-        std::ostream ostream(&membuf);
-        State::emulator->saveState(ostream);
-    }
-
-    void resumeFromState(app_save_state *state) {
-        if (State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
-            if (std::strlen(state->romPath) == 0) {
-                LOGW("ROM path was not serialized, not resuming from previous state");
-                return;
-            }
-            if (FunkyBoyAndroid::loadROM(state->romPath) != FunkyBoy::CartridgeStatus::Loaded) {
-                LOGE("ROM could not be loaded, resuming from previous state failed");
-                return;
-            }
-        }
-        FunkyBoy::Util::membuf membuf(state->state, FB_SAVE_STATE_MAX_BUFFER_SIZE, true);
-        std::istream istream(&membuf);
-        State::emulator->loadState(istream);
-        LOGD("Resumed emulation from previous state");
     }
 
 }

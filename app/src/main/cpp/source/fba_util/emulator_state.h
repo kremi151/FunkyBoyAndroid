@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef FB_ANDROID_UTIL_SAVED_STATE_H
-#define FB_ANDROID_UTIL_SAVED_STATE_H
+#ifndef FB_ANDROID_UTIL_EMULATOR_STATE_H
+#define FB_ANDROID_UTIL_EMULATOR_STATE_H
 
-#include <util/typedefs.h>
-
-#define FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE 256
+#include <cartridge/status.h>
+#include <engine/engine.h>
 
 namespace FunkyBoyAndroid {
-
-    typedef struct {
-        char state[FB_SAVE_STATE_MAX_BUFFER_SIZE];
-        char romPath[FB_ANDROID_APP_STATE_ROM_PATH_BUFFER_SIZE];
-    } app_save_state;
-
+    FunkyBoy::CartridgeStatus loadROM(const char *inRomPath);
+    void loadSaveGame(struct engine* engine);
+    void saveGame();
 }
 
-#endif //FB_ANDROID_UTIL_SAVED_STATE_H
+#endif //FB_ANDROID_UTIL_EMULATOR_STATE_H
