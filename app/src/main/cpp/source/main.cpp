@@ -268,7 +268,7 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
             float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
             bool touched = isTouched(engine->keyStart, scaledX, scaledY);
             if (touched) {
-                requestPickRom(engine);
+                showOptionsActivity(engine);
             }
         }
         return 1;
@@ -411,6 +411,14 @@ namespace FunkyBoyAndroid {
         return 1;
     }
 
+    static void loadInitialRom(struct engine *engine) {
+        std::string romPath = getInitialRomPath(engine);
+        if (!romPath.empty()) {
+            LOGD("Loading ROM from intent path: %s", romPath.c_str());
+            loadROM(romPath.c_str());
+        }
+    }
+
 }
 
 /**
@@ -455,6 +463,9 @@ void android_main(struct android_app* state) {
         // We are starting with a previous saved state; restore from it.
         auto savedState = static_cast<FunkyBoyAndroid::app_save_state*>(state->savedState);
         FunkyBoyAndroid::resumeFromState(savedState);
+    } else {
+        // Initial app launch, check if the activity has been started with a path to a ROM
+        loadInitialRom(&engine);
     }
 
     pipe(fbMsgPipe);

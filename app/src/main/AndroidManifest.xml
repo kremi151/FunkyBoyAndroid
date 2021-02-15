@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- BEGIN_INCLUDE(manifest) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           package="lu.kremi151.funkyboy">
 
@@ -12,22 +11,25 @@
       android:label="@string/app_name"
       android:requestLegacyExternalStorage="true">
 
-    <!-- Our activity is the built-in NativeActivity framework class.
-         This will take care of integrating with our NDK code. -->
-    <activity android:name="lu.kremi151.funkyboy.FunkyBoyActivity"
+    <activity android:name="lu.kremi151.funkyboy.MainActivity"
               android:label="@string/app_name"
-              android:configChanges="orientation|screenSize|keyboardHidden"
-              android:screenOrientation="portrait"
-              android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
-      <!-- Tell NativeActivity the name of our .so -->
-      <meta-data android:name="android.app.lib_name"
-                 android:value="fb_android" />
+              android:theme="@style/FunkyBoyTheme">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
+
+    <activity android:name="lu.kremi151.funkyboy.EmulatorActivity"
+              android:label="@string/app_name"
+              android:configChanges="orientation|screenSize|keyboardHidden"
+              android:screenOrientation="portrait"
+              android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+              android:launchMode="singleTask">
+      <!-- Tell NativeActivity the name of our .so -->
+      <meta-data android:name="android.app.lib_name"
+                 android:value="fb_android" />
+    </activity>
   </application>
 
 </manifest>
-<!-- END_INCLUDE(manifest) -->
