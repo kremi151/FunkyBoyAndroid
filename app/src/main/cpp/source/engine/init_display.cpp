@@ -84,8 +84,9 @@ int FunkyBoyAndroid::Engine::initDisplay(struct engine *engine) {
     uiObjTemplate.y = bufferHeight - 20;
     engine->keyStart = uiObjTemplate;
 
-    uiObjTemplate.x = (FB_GB_DISPLAY_WIDTH - 25) / 2;
-    uiObjTemplate.y = FB_GB_DISPLAY_HEIGHT + 10;
+    uiObjTemplate.x = (bufferWidth - 25) / 2;
+    uiObjTemplate.y = dpadY - 20;
+    engine->keyOptions = uiObjTemplate;
 
     auto result = ANativeWindow_setBuffersGeometry(window, bufferWidth, bufferHeight, WINDOW_FORMAT_RGBA_8888);
     if (result != 0) {
@@ -108,6 +109,7 @@ int FunkyBoyAndroid::Engine::initDisplay(struct engine *engine) {
     }
 
     engine->keyLatch = 0;
+    engine->optionsPressed = false;
 
     return result;
 }

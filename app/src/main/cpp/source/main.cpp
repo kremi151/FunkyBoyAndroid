@@ -82,7 +82,7 @@ struct {
     std::string unsupportedMBC;
     std::string unsupportedRAMSize;
     std::string unknownStatus;
-    std::string pressStart;
+    std::string pressOptKey;
 } fb_strings;
 
 namespace FunkyBoyAndroid {
@@ -96,7 +96,7 @@ namespace FunkyBoyAndroid {
         fb_strings.unsupportedMBC = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_mbc);
         fb_strings.unsupportedRAMSize = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unsupported_ram_size);
         fb_strings.unknownStatus = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::unknown_status);
-        fb_strings.pressStart = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::press_start);
+        fb_strings.pressOptKey = FunkyBoyAndroid::R::getString(env, nativeActivity, FunkyBoyAndroid::R::String::press_opt_key);
     }
 
 }
@@ -168,7 +168,7 @@ static void engine_draw_frame(struct engine* engine) {
         // Draw headline
         gettimeofday(&tp, nullptr);
         if (tp.tv_sec % 2 == 1) {
-            text = fb_strings.pressStart.c_str();
+            text = fb_strings.pressOptKey.c_str();
             text_width = measureTextWidth(text, 0);
             drawTextAt(engine->env, buffer, engine->bitmapFontsUppercase, text, 0, (FB_GB_DISPLAY_WIDTH - text_width) / 2, 110);
         }
@@ -238,6 +238,13 @@ static void handleInputPointer(int index, AInputEvent* event, struct engine *eng
     touched = isTouched(engine->keySelect, scaledX, scaledY);
     if (touched) {
         latch |= FBA_KEY_SELECT;
+    }
+    touched = isTouched(engine->keyOptions, scaledX, scaledY);
+    if (touched != engine->optionsPressed) {
+        engine->optionsPressed = touched;
+        if (touched) {
+            FunkyBoyAndroid::showOptionsActivity(engine);
+        }
     }
 }
 

@@ -48,10 +48,12 @@ namespace FunkyBoyAndroid {
         ui_obj keyB;
         ui_obj keyStart;
         ui_obj keySelect;
+        ui_obj keyOptions;
 
         float uiScale;
 
         bool animating;
+        bool optionsPressed;
 
         int keyLatch;
 
