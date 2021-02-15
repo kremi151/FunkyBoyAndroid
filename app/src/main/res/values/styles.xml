@@ -3,4 +3,10 @@
     <color name="colorPrimary">#bada55</color>
     <color name="colorPrimaryDark">#8fa83e</color>
     <color name="colorAccent">#e6e353</color>
+
+    <style name="FunkyBoyTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
 </resources>

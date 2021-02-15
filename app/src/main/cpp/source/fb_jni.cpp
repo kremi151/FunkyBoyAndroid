@@ -19,15 +19,37 @@
 #include <unistd.h>
 #include <android/native_activity.h>
 
-void FunkyBoyAndroid::requestPickRom(struct engine* engine) {
+void FunkyBoyAndroid::showOptionsActivity(struct engine* engine) {
     ANativeActivity *nativeActivity = engine->app->activity;
     JNIEnv *env = engine->env;
 
     jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
     jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    jmethodID method = env->GetMethodID(nativeActivityClass, "requestPickRom", "()V");
+    jmethodID method = env->GetMethodID(nativeActivityClass, "showOptionsActivity", "()V");
 
     env->CallVoidMethod(nativeActivityObj, method);
+}
+
+std::string FunkyBoyAndroid::getInitialRomPath(struct engine *engine) {
+    ANativeActivity *nativeActivity = engine->app->activity;
+    JNIEnv *env = engine->env;
+
+    jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
+    jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
+    jmethodID method = env->GetMethodID(nativeActivityClass, "getInitialRomPath", "()Ljava/lang/String;");
+
+    auto javaRomPath = static_cast<jstring>(env->CallObjectMethod(nativeActivityObj, method));
+    if (javaRomPath == nullptr) {
+        return std::string();
+    }
+
+    std::string romPath;
+    jboolean isCopy;
+    const char *jstr = env->GetStringUTFChars(javaRomPath, &isCopy);
+    romPath = jstr;
+    env->ReleaseStringUTFChars(javaRomPath, jstr);
+    env->DeleteLocalRef(javaRomPath);
+    return romPath;
 }
 
 jobject FunkyBoyAndroid::loadBitmap(struct engine* engine, jint type) {
@@ -75,7 +97,7 @@ std::string FunkyBoyAndroid::getSavePath(struct engine* engine, const FunkyBoy::
 
 extern "C" {
 
-    JNIEXPORT void JNICALL Java_lu_kremi151_funkyboy_FunkyBoyActivity_romPicked(JNIEnv *env, jobject, jstring path) {
+    JNIEXPORT void JNICALL Java_lu_kremi151_funkyboy_EmulatorActivity_romPicked(JNIEnv *env, jobject, jstring path) {
         jboolean isCopy;
         auto path_cstr = env->GetStringUTFChars(path, &isCopy);
 

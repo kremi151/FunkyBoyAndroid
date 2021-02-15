@@ -16,45 +16,55 @@
 
 package lu.kremi151.funkyboy
 
-import android.Manifest
 import android.app.NativeActivity
+import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Bundle
 import android.os.Environment
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.nbsp.materialfilepicker.MaterialFilePicker
-import com.nbsp.materialfilepicker.ui.FilePickerActivity
 import java.io.File
-import java.util.regex.Pattern
 
-class FunkyBoyActivity: NativeActivity() {
+class EmulatorActivity: NativeActivity() {
 
     companion object {
-        const val REQUEST_CODE_PICK_ROM = 186
-        const val REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS = 187
-
         init {
             System.loadLibrary("fb_android")
         }
+
+        private const val INTENT_ROM_PATH = "romPath"
+
+        fun createIntent(context: Context, romPath: String): Intent {
+            val intent = Intent(context, EmulatorActivity::class.java)
+            intent.putExtra(INTENT_ROM_PATH, romPath)
+            return intent
+        }
     }
 
-    private var awaitingPickRomResult = false
     private var lastBackPressed = 0L
+    private var intentRomPath: String? = null
 
     private external fun romPicked(path: String)
 
-    private fun pickRom() {
-        MaterialFilePicker()
-                .withActivity(this)
-                .withCloseMenu(true)
-                .withFilter(Pattern.compile(".*\\.(gb|bin)$"))
-                .withRequestCode(REQUEST_CODE_PICK_ROM)
-                .start()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        if (savedInstanceState == null) {
+            intent.getStringExtra(INTENT_ROM_PATH)?.let { romPath ->
+                // This will be picked up by the bootstrap of the native part, therefore
+                // this needs to be set before calling super.onCreate
+                this.intentRomPath = romPath
+            }
+        }
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.getStringExtra(INTENT_ROM_PATH)?.let { romPath ->
+            this.intentRomPath = romPath
+            romPicked(romPath)
+        }
     }
 
     @Suppress("unused") // Used over JNI
@@ -82,18 +92,8 @@ class FunkyBoyActivity: NativeActivity() {
     }
 
     @Suppress("unused") // Used over JNI
-    fun requestPickRom() {
-        if (awaitingPickRomResult) {
-            return
-        }
-        awaitingPickRomResult = true
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                    REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS)
-        } else {
-            pickRom()
-        }
+    fun showOptionsActivity() {
+        startActivity(Intent(this, MainActivity::class.java))
     }
 
     private fun loadBitmapFromResources(resId: Int): Bitmap {
@@ -116,28 +116,8 @@ class FunkyBoyActivity: NativeActivity() {
         return resources.getString(resources.getIdentifier(name, "string", packageName))
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_PICK_ROM) {
-            awaitingPickRomResult = false
-            if (resultCode == RESULT_OK) {
-                val filePath = data?.getStringExtra(FilePickerActivity.RESULT_FILE_PATH)
-                if (filePath != null) {
-                    romPicked(filePath)
-                }
-            }
-        }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                pickRom()
-            } else {
-                awaitingPickRomResult = false
-            }
-        }
-    }
+    @Suppress("unused") // Used over JNI
+    fun getInitialRomPath(): String? = intentRomPath
 
     override fun onBackPressed() {
         val now = System.currentTimeMillis()

@@ -11,4 +11,5 @@
     <string name="unsupported_ram_size">Unsupported RAM size</string>
     <string name="unknown_status">Unknown status</string>
     <string name="press_start">PRESS START!</string>
+    <string name="load_rom">Load ROM</string>
 </resources>
