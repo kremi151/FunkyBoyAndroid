@@ -1,9 +1,11 @@
 package lu.kremi151.funkyboy
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.MenuItem
 import android.widget.GridView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -18,18 +20,36 @@ class MainActivity: AppCompatActivity() {
     companion object {
         const val REQUEST_CODE_PICK_ROM = 186
         const val REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS = 187
+
+        private const val INTENT_ROM_LOADED = "romLoaded"
+        private const val INTENT_HAS_PARENT_ACTIVITY = "hasParentActivity"
+
+        fun newIntent(context: Context, romLoaded: Boolean): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                putExtra(INTENT_ROM_LOADED, romLoaded)
+                putExtra(INTENT_HAS_PARENT_ACTIVITY, true)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val romLoaded = intent.getBooleanExtra(INTENT_ROM_LOADED, false)
+        val hasParentActivity = intent.getBooleanExtra(INTENT_HAS_PARENT_ACTIVITY, false)
+
         setContentView(R.layout.activity_main)
+
+        if (hasParentActivity) {
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        }
 
         val adapter = MainTilesAdapter(listOf(
                 MainTilesAdapter.Entry(
                         id = R.id.item_load_rom,
                         titleRes = R.string.load_rom,
-                        iconRes = R.drawable.ic_gameboy
+                        iconRes = R.drawable.ic_gameboy,
+                        isEnabled = { !romLoaded },
                 ),
         ), this)
 
@@ -40,6 +60,15 @@ class MainActivity: AppCompatActivity() {
                     R.id.item_load_rom -> requestPickRom()
                 }
             }
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return if (item.itemId == android.R.id.home) {
+            finish()
+            true
+        } else {
+            super.onOptionsItemSelected(item)
         }
     }
 

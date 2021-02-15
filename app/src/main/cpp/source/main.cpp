@@ -243,7 +243,8 @@ static void handleInputPointer(int index, AInputEvent* event, struct engine *eng
     if (touched != engine->optionsPressed) {
         engine->optionsPressed = touched;
         if (touched) {
-            FunkyBoyAndroid::showOptionsActivity(engine);
+            FunkyBoyAndroid::showOptionsActivity(engine,
+                    FunkyBoyAndroid::State::emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded);
         }
     }
 }
@@ -273,9 +274,10 @@ static int32_t engine_handle_input(struct android_app* app, AInputEvent* event) 
         if (flags == AMOTION_EVENT_ACTION_DOWN) {
             float scaledX = AMotionEvent_getX(event, 0) * engine->uiScale;
             float scaledY = AMotionEvent_getY(event, 0) * engine->uiScale;
-            bool touched = isTouched(engine->keyStart, scaledX, scaledY);
+            bool touched = isTouched(engine->keyOptions, scaledX, scaledY);
             if (touched) {
-                showOptionsActivity(engine);
+                showOptionsActivity(engine,
+                        FunkyBoyAndroid::State::emulator->getCartridgeStatus() == FunkyBoy::CartridgeStatus::Loaded);
             }
         }
         return 1;
