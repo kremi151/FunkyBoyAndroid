@@ -48,6 +48,8 @@ class MainTilesAdapter(
         return view
     }
 
+    override fun isEnabled(position: Int) = entries[position].isEnabled()
+
     internal class ViewHolder (
             val imageView: ImageView,
             val textView: TextView,
@@ -57,6 +59,7 @@ class MainTilesAdapter(
             @IdRes val id: Int,
             @DrawableRes val iconRes: Int,
             @StringRes val titleRes: Int,
+            val isEnabled: () -> Boolean,
     )
 
 }

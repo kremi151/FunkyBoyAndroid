@@ -19,15 +19,15 @@
 #include <unistd.h>
 #include <android/native_activity.h>
 
-void FunkyBoyAndroid::showOptionsActivity(struct engine* engine) {
+void FunkyBoyAndroid::showOptionsActivity(struct engine* engine, bool romLoaded) {
     ANativeActivity *nativeActivity = engine->app->activity;
     JNIEnv *env = engine->env;
 
     jobject nativeActivityObj = nativeActivity->clazz; // "clazz" is misnamed, this is the actual activity instance
     jclass nativeActivityClass = env->GetObjectClass(nativeActivity->clazz);
-    jmethodID method = env->GetMethodID(nativeActivityClass, "showOptionsActivity", "()V");
+    jmethodID method = env->GetMethodID(nativeActivityClass, "showOptionsActivity", "(Z)V");
 
-    env->CallVoidMethod(nativeActivityObj, method);
+    env->CallVoidMethod(nativeActivityObj, method, romLoaded);
 }
 
 std::string FunkyBoyAndroid::getInitialRomPath(struct engine *engine) {

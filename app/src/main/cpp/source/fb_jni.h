@@ -26,7 +26,7 @@ extern int fbMsgPipe[2];
 
 namespace FunkyBoyAndroid {
 
-    void showOptionsActivity(struct engine* engine);
+    void showOptionsActivity(struct engine* engine, bool romLoaded);
     std::string getInitialRomPath(struct engine* engine);
     jobject loadBitmap(struct engine* engine, jint type);
     std::string getSavePath(struct engine* engine, const FunkyBoy::ROMHeader *romHeader);
