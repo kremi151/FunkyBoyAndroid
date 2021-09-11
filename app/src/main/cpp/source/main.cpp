@@ -35,6 +35,7 @@
 #include <emulator/emulator.h>
 #include <unistd.h>
 #include <controllers/display_android.h>
+#include <controllers/audio_android.h>
 #include <fba_util/logging.h>
 #include <fba_util/app_state.h>
 #include <fba_util/emulator_state.h>
@@ -442,6 +443,7 @@ void android_main(struct android_app* state) {
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     FunkyBoyAndroid::State::emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
     controllers->setDisplay(FunkyBoyAndroid::State::emuDisplayController);
+    controllers->setAudio(std::make_shared<FunkyBoyAndroid::Controller::AudioControllerAndroid>());
     FunkyBoyAndroid::State::emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     if (state->savedState != nullptr) {
