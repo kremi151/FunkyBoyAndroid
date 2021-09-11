@@ -29,8 +29,7 @@ AudioControllerAndroid::AudioControllerAndroid() {
     builder.setFormat(oboe::AudioFormat::Float);
     builder.setChannelCount(oboe::ChannelCount::Stereo);
     builder.setDataCallback(this);
-    builder.setFramesPerDataCallback(FB_ANDROID_AUDIO_BUFFER_SIZE / 2);
-    builder.setFramesPerDataCallback(100);
+    builder.setFramesPerDataCallback(400);
 
     streamResult = builder.openManagedStream(managedStream);
     if (streamResult == oboe::Result::OK) {
@@ -47,65 +46,25 @@ AudioControllerAndroid::~AudioControllerAndroid() {
 }
 
 oboe::DataCallbackResult AudioControllerAndroid::onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) {
-    // TODO: See https://github.com/google/oboe/blob/master/docs/GettingStarted.md#creating-an-audio-stream
+    auto floatData = (float *) audioData;
 
-    // We requested AudioFormat::Float so we assume we got it.
-    // For production code always check what format
-    // the stream has and cast to the appropriate type.
-    /*auto *outputData = static_cast<float *>(audioData);
-
-    // Generate random numbers (white noise) centered around zero.
-    const float amplitude = 0.2f;
-    for (int i = 0; i < numFrames; ++i){
-        outputData[i] = ((float)drand48() - 0.5f) * 2 * amplitude;
-    }
-
-    return oboe::DataCallbackResult::Continue;*/
-
-    /*float *floatData = (float *) audioData;
-    for (int i = 0; i < numFrames; ++i) {
-        float sampleValue = kAmplitude * sinf(mPhase);
-        for (int j = 0; j < kChannelCount; j++) {
-            floatData[i * kChannelCount + j] = sampleValue;
+    float sample;
+    const size_t samples = std::min(queue.size(), static_cast<size_t>(numFrames * 2));
+    for (size_t i = 0 ; i < samples ; i++) {
+        if (!queue.pop(sample)) {
+            break;
         }
-        mPhase += mPhaseIncrement;
-        if (mPhase >= kTwoPi) mPhase -= kTwoPi;
-    }*/
-
-    const size_t bufferPos = bufferPosition;
-    bufferPosition = FB_ANDROID_AUDIO_BUFFER_SIZE; // Soft lock
-
-    // Copy samples
-    float *floatData = (float *) audioData;
-    const int32_t samples = std::min(bufferPos, static_cast<size_t>(numFrames * 2));
-    for (int32_t i = 0 ; i < samples ; i++) {
-        floatData[i] = buffer[i];
-    }
-
-    audioStream->setBufferSizeInFrames(samples / 2);
-
-    // Move remaining samples
-    if (samples < bufferPos) {
-        const size_t samplesToMove = bufferPos - samples;
-        size_t j = 0;
-        for (size_t i = 0 ; i < samplesToMove ; i++) {
-            buffer[j++] = buffer[samples + i];
-        }
-
-        // Unlock buffer
-        bufferPosition = samplesToMove;
-    } else {
-        // Unlock buffer
-        bufferPosition = 0;
+        floatData[i] = sample;
     }
 
     return oboe::DataCallbackResult::Continue;
 }
 
 void AudioControllerAndroid::pushSample(float left, float right) {
-    while (bufferPosition >= FB_ANDROID_AUDIO_BUFFER_SIZE - 2) {
+    while (!queue.push(left)) {
         // Wait
     }
-    buffer[bufferPosition++] = left;
-    buffer[bufferPosition++] = right;
+    while (!queue.push(right)) {
+        // Wait
+    }
 }

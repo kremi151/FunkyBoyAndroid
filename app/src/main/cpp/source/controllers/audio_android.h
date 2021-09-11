@@ -19,8 +19,9 @@
 
 #include <oboe/oboe.h>
 #include <controllers/audio.h>
+#include <util/LockFreeQueue.h>
 
-#define FB_ANDROID_AUDIO_BUFFER_SIZE 4096
+#define FB_ANDROID_AUDIO_QUEUE_SIZE 4096
 
 namespace FunkyBoyAndroid::Controller {
 
@@ -29,12 +30,7 @@ namespace FunkyBoyAndroid::Controller {
         oboe::ManagedStream managedStream;
         oboe::Result streamResult;
 
-        float buffer[FB_ANDROID_AUDIO_BUFFER_SIZE]{};
-        size_t bufferPosition{};
-
-        // Stream params
-        static int constexpr kChannelCount = 2;
-        static int constexpr kSampleRate = 48000;
+        LockFreeQueue<float, FB_ANDROID_AUDIO_QUEUE_SIZE, size_t> queue;
 
     public:
         AudioControllerAndroid();

@@ -69,6 +69,7 @@ set(HEADERS
         source/ui/draw_text.h
         source/controllers/display_android.h
         source/controllers/audio_android.h
+        source/util/LockFreeQueue.h
         )
 
 fb_generate_strings_cpp()
