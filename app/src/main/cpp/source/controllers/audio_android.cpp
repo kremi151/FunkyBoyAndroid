@@ -34,6 +34,7 @@ AudioControllerAndroid::AudioControllerAndroid() {
     streamResult = builder.openManagedStream(managedStream);
     if (streamResult == oboe::Result::OK) {
         managedStream->requestStart();
+        playing = true;
     } else {
         LOGE("Failed to create stream. Error: %s", oboe::convertToText(streamResult));
     }
@@ -61,10 +62,25 @@ oboe::DataCallbackResult AudioControllerAndroid::onAudioReady(oboe::AudioStream 
 }
 
 void AudioControllerAndroid::pushSample(float left, float right) {
+    if (!playing) {
+        return;
+    }
     while (!queue.push(left)) {
         // Wait
     }
     while (!queue.push(right)) {
         // Wait
+    }
+}
+
+void AudioControllerAndroid::setPlaying(bool p) {
+    if (playing && !p) {
+        LOGD("Pausing audio\n");
+        playing = false;
+        managedStream->requestPause();
+    } else if (!playing && p) {
+        LOGD("Resuming audio\n");
+        playing = true;
+        managedStream->requestStart();
     }
 }

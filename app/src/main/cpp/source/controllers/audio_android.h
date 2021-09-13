@@ -29,6 +29,7 @@ namespace FunkyBoyAndroid::Controller {
     private:
         oboe::ManagedStream managedStream;
         oboe::Result streamResult;
+        bool playing;
 
         LockFreeQueue<float, FB_ANDROID_AUDIO_QUEUE_SIZE, size_t> queue;
 
@@ -37,6 +38,8 @@ namespace FunkyBoyAndroid::Controller {
         ~AudioControllerAndroid() override;
 
         void pushSample(float left, float right) override;
+
+        void setPlaying(bool playing);
 
         oboe::DataCallbackResult onAudioReady(oboe::AudioStream *audioStream, void *audioData, int32_t numFrames) override;
     };
