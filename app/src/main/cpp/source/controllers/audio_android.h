@@ -17,7 +17,7 @@
 #ifndef FB_ANDROID_CONTROLLERS_AUDIO_ANDROID_H
 #define FB_ANDROID_CONTROLLERS_AUDIO_ANDROID_H
 
-#include <oboe/oboe.h>
+#include <oboe/Oboe.h>
 #include <controllers/audio.h>
 #include <util/LockFreeQueue.h>
 
