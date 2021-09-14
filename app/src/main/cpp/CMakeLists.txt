@@ -25,6 +25,8 @@ set(FB_ROOT_DIR ${CMAKE_SOURCE_DIR}/funkyboy)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${FB_ROOT_DIR}/cmake-common)
 
+find_package (oboe REQUIRED CONFIG)
+
 include(jni_adhesive.cmake)
 
 # build native_app_glue as a static lib
@@ -50,6 +52,7 @@ set(SOURCES
         source/ui/draw_controls.cpp
         source/ui/draw_text.cpp
         source/controllers/display_android.cpp
+        source/controllers/audio_android.cpp
         )
 
 set(HEADERS
@@ -65,6 +68,8 @@ set(HEADERS
         source/ui/draw_controls.h
         source/ui/draw_text.h
         source/controllers/display_android.h
+        source/controllers/audio_android.h
+        source/util/LockFreeQueue.h
         )
 
 fb_generate_strings_cpp()
@@ -83,6 +88,7 @@ add_subdirectory("${FB_ROOT_DIR}/core" fb_core_build)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DFB_DEBUG")
 
 fb_use_autosave(fb_core)
+fb_use_sound(fb_core)
 
 # add lib dependencies
 target_link_libraries(fb_android
@@ -90,4 +96,6 @@ target_link_libraries(fb_android
     native_app_glue
     jnigraphics
     fb_core
-    log)
+    log
+    oboe::oboe
+    )

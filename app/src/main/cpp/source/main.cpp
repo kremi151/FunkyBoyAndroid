@@ -35,6 +35,7 @@
 #include <emulator/emulator.h>
 #include <unistd.h>
 #include <controllers/display_android.h>
+#include <controllers/audio_android.h>
 #include <fba_util/logging.h>
 #include <fba_util/app_state.h>
 #include <fba_util/emulator_state.h>
@@ -66,6 +67,7 @@ struct timeval tp;
 namespace FunkyBoyAndroid::State {
     std::unique_ptr<FunkyBoy::Emulator> emulator;
     std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
+    std::shared_ptr<FunkyBoy::Controller::AudioController> emuAudioController;
 
     bool initialSaveLoaded = false;
     std::string romPath;
@@ -376,11 +378,13 @@ static void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             LOGD("CMD: APP_CMD_GAINED_FOCUS");
             engine->activePointerIds.clear();
             // When our app gains focus, we start animating again.
+            dynamic_cast<FunkyBoyAndroid::Controller::AudioControllerAndroid*>(FunkyBoyAndroid::State::emuAudioController.get())->setPlaying(true);
             engine->animating = true;
             break;
         case APP_CMD_LOST_FOCUS:
             LOGD("CMD: APP_CMD_LOST_FOCUS");
             engine->activePointerIds.clear();
+            dynamic_cast<FunkyBoyAndroid::Controller::AudioControllerAndroid*>(FunkyBoyAndroid::State::emuAudioController.get())->setPlaying(false);
             engine->animating = false;
             engine_draw_frame(engine);
             break;
@@ -441,7 +445,9 @@ void android_main(struct android_app* state) {
 
     auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     FunkyBoyAndroid::State::emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
+    FunkyBoyAndroid::State::emuAudioController = std::make_shared<FunkyBoyAndroid::Controller::AudioControllerAndroid>();
     controllers->setDisplay(FunkyBoyAndroid::State::emuDisplayController);
+    controllers->setAudio(FunkyBoyAndroid::State::emuAudioController);
     FunkyBoyAndroid::State::emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
 
     if (state->savedState != nullptr) {

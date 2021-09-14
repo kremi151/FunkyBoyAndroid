@@ -23,6 +23,7 @@
 namespace FunkyBoyAndroid::State {
     extern std::unique_ptr<FunkyBoy::Emulator> emulator;
     extern std::shared_ptr<FunkyBoy::Controller::DisplayController> emuDisplayController;
+    extern std::shared_ptr<FunkyBoy::Controller::AudioController> emuAudioController;
 
     extern bool initialSaveLoaded;
     extern std::string romPath;
