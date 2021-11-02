@@ -443,12 +443,13 @@ void android_main(struct android_app* state) {
 
     FunkyBoyAndroid::reloadStrings(env, state->activity);
 
-    auto controllers = std::make_shared<FunkyBoy::Controller::Controllers>();
     FunkyBoyAndroid::State::emuDisplayController = std::make_shared<FunkyBoyAndroid::Controller::DisplayControllerAndroid>(&engine);
     FunkyBoyAndroid::State::emuAudioController = std::make_shared<FunkyBoyAndroid::Controller::AudioControllerAndroid>();
-    controllers->setDisplay(FunkyBoyAndroid::State::emuDisplayController);
-    controllers->setAudio(FunkyBoyAndroid::State::emuAudioController);
-    FunkyBoyAndroid::State::emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG, controllers);
+
+    FunkyBoyAndroid::State::emulator = std::make_unique<FunkyBoy::Emulator>(FunkyBoy::GameBoyType::GameBoyDMG);
+    FunkyBoyAndroid::State::emulator->setControllers(FunkyBoy::Controller::Controllers()
+            .withDisplay(FunkyBoyAndroid::State::emuDisplayController)
+            .withAudio(FunkyBoyAndroid::State::emuAudioController));
 
     if (state->savedState != nullptr) {
         // We are starting with a previous saved state; restore from it.
