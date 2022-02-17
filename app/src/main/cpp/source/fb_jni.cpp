@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <android/native_activity.h>
 #include <fba_util/shared.h>
+#include <controllers/display_android.h>
 
 void FunkyBoyAndroid::showOptionsActivity(struct engine* engine, bool romLoaded) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -124,6 +125,16 @@ extern "C" {
         char romTitleSafe[FB_ROM_HEADER_TITLE_BYTES + 1]{};
         std::memcpy(romTitleSafe, romHeader->title, FB_ROM_HEADER_TITLE_BYTES);
         return env->NewStringUTF(romTitleSafe);
+    }
+
+    JNIEXPORT jintArray JNICALL Java_lu_kremi151_funkyboy_MainActivity_getDisplayPixels(JNIEnv *env, jobject) {
+        auto displayController = dynamic_cast<FunkyBoyAndroid::Controller::DisplayControllerAndroid *>(FunkyBoyAndroid::State::emuDisplayController.get());
+        auto pixels = displayController->getPixels();
+
+        jintArray res = env->NewIntArray(FB_ANDROID_DISPLAY_PIXELS);
+        env->SetIntArrayRegion(res, 0, FB_ANDROID_DISPLAY_PIXELS, reinterpret_cast<const jint *>(pixels));
+
+        return res;
     }
 
 }

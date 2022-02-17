@@ -22,6 +22,8 @@
 
 #include <android/native_window.h>
 
+#define FB_ANDROID_DISPLAY_PIXELS (FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT)
+
 namespace FunkyBoyAndroid {
 
     namespace Controller {
@@ -40,6 +42,10 @@ namespace FunkyBoyAndroid {
 
             void drawScanLine(FunkyBoy::u8 y, FunkyBoy::u8 *buffer) override;
             void drawScreen() override;
+
+            const uint32_t *getPixels() const {
+                return pixels;
+            }
         };
 
     }

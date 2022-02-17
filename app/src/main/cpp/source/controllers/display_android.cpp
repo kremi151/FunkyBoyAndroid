@@ -29,7 +29,7 @@ using namespace FunkyBoyAndroid::Controller;
 DisplayControllerAndroid::DisplayControllerAndroid(struct engine *engine)
     : engine(engine)
     , window(nullptr)
-    , pixels(new uint32_t[FB_GB_DISPLAY_WIDTH * FB_GB_DISPLAY_HEIGHT])
+    , pixels(new uint32_t[FB_ANDROID_DISPLAY_PIXELS])
 {
 }
 

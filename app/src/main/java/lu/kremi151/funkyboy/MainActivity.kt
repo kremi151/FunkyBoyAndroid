@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.GridView
@@ -38,6 +39,8 @@ class MainActivity: AppCompatActivity() {
     }
 
     private external fun getRomTitle(): String?
+
+    private external fun getDisplayPixels(): IntArray
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,12 +129,14 @@ class MainActivity: AppCompatActivity() {
         shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
+        val bmp = Bitmap.createBitmap(getDisplayPixels(), 160, 144, Bitmap.Config.ARGB_8888)
+
         val sc = ShortcutInfoCompat
                 .Builder(this, UUID.randomUUID().toString())
                 .setShortLabel(romTitle)
                 .setLongLabel(romTitle + " - " + getString(R.string.app_name))
                 .setIntent(shortcutIntent)
-                .setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher))
+                .setIcon(IconCompat.createWithBitmap(bmp))
 
         ShortcutManagerCompat.requestPinShortcut(this, sc.build(), null)
     }
