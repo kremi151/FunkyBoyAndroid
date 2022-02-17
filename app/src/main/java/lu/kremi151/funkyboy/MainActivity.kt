@@ -37,6 +37,8 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
+    private external fun getRomTitle(): String?
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -118,16 +120,18 @@ class MainActivity: AppCompatActivity() {
     }
 
     private fun addToHome() {
+        val romTitle = getRomTitle() ?: return
+
         val shortcutIntent = Intent(applicationContext, MainActivity::class.java)
         shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 
         val sc = ShortcutInfoCompat
                 .Builder(this, UUID.randomUUID().toString())
-                .setShortLabel(getString(R.string.app_name))
-                .setLongLabel(getString(R.string.app_name)) // TODO: Get ROM name
+                .setShortLabel(romTitle)
+                .setLongLabel(romTitle + " - " + getString(R.string.app_name))
                 .setIntent(shortcutIntent)
-                .setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher)) // TODO: Get snapshot
+                .setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher))
 
         ShortcutManagerCompat.requestPinShortcut(this, sc.build(), null)
     }

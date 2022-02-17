@@ -18,6 +18,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <android/native_activity.h>
+#include <fba_util/shared.h>
 
 void FunkyBoyAndroid::showOptionsActivity(struct engine* engine, bool romLoaded) {
     ANativeActivity *nativeActivity = engine->app->activity;
@@ -107,6 +108,22 @@ extern "C" {
         write(fbMsgPipe[1], path_cstr, strln);
 
         env->ReleaseStringUTFChars(path, path_cstr);
+    }
+
+    JNIEXPORT jstring JNICALL Java_lu_kremi151_funkyboy_MainActivity_getRomTitle(JNIEnv *env, jobject) {
+        if (FunkyBoyAndroid::State::emulator->getCartridgeStatus() != FunkyBoy::CartridgeStatus::Loaded) {
+            return nullptr;
+        }
+
+        auto romHeader = FunkyBoyAndroid::State::emulator->getROMHeader();
+
+        if (romHeader == nullptr) {
+            return nullptr;
+        }
+
+        char romTitleSafe[FB_ROM_HEADER_TITLE_BYTES + 1]{};
+        std::memcpy(romTitleSafe, romHeader->title, FB_ROM_HEADER_TITLE_BYTES);
+        return env->NewStringUTF(romTitleSafe);
     }
 
 }
