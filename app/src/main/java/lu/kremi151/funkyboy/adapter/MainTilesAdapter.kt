@@ -48,7 +48,8 @@ class MainTilesAdapter(
         return view
     }
 
-    override fun isEnabled(position: Int) = entries[position].isEnabled()
+    // TODO: Hide "invisible" items
+    override fun isEnabled(position: Int) = entries[position].isEnabled() && entries[position].isVisible()
 
     internal class ViewHolder (
             val imageView: ImageView,
@@ -60,6 +61,7 @@ class MainTilesAdapter(
             @DrawableRes val iconRes: Int,
             @StringRes val titleRes: Int,
             val isEnabled: () -> Boolean,
+            val isVisible: () -> Boolean = { true },
     )
 
 }

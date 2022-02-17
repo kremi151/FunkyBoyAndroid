@@ -10,10 +10,15 @@ import android.widget.GridView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
 import com.nbsp.materialfilepicker.ui.FilePickerActivity
 import lu.kremi151.funkyboy.adapter.MainTilesAdapter
+import java.util.*
 import java.util.regex.Pattern
+
 
 class MainActivity: AppCompatActivity() {
 
@@ -51,6 +56,13 @@ class MainActivity: AppCompatActivity() {
                         iconRes = R.drawable.ic_gameboy,
                         isEnabled = { !romLoaded },
                 ),
+                MainTilesAdapter.Entry(
+                        id = R.id.item_add_to_home,
+                        titleRes = R.string.add_to_home,
+                        iconRes = R.drawable.ic_add_to_home_screen,
+                        isEnabled = { romLoaded },
+                        isVisible = { ShortcutManagerCompat.isRequestPinShortcutSupported(this) }
+                ),
         ), this)
 
         findViewById<GridView>(R.id.gridView).apply {
@@ -58,6 +70,7 @@ class MainActivity: AppCompatActivity() {
             setOnItemClickListener { _, _, position, _ ->
                 when (adapter.getEntryId(position)) {
                     R.id.item_load_rom -> requestPickRom()
+                    R.id.item_add_to_home -> addToHome()
                 }
             }
         }
@@ -102,6 +115,21 @@ class MainActivity: AppCompatActivity() {
         } else {
             pickRom()
         }
+    }
+
+    private fun addToHome() {
+        val shortcutIntent = Intent(applicationContext, MainActivity::class.java)
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        val sc = ShortcutInfoCompat
+                .Builder(this, UUID.randomUUID().toString())
+                .setShortLabel(getString(R.string.app_name))
+                .setLongLabel(getString(R.string.app_name)) // TODO: Get ROM name
+                .setIntent(shortcutIntent)
+                .setIcon(IconCompat.createWithResource(this, R.mipmap.ic_launcher)) // TODO: Get snapshot
+
+        ShortcutManagerCompat.requestPinShortcut(this, sc.build(), null)
     }
 
     private fun pickRom() {

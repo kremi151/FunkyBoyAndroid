@@ -12,4 +12,5 @@
     <string name="unknown_status">Unknown status</string>
     <string name="press_opt_key">PRESS OPT!</string>
     <string name="load_rom">Load ROM</string>
+    <string name="add_to_home">Add to Home</string>
 </resources>
