@@ -17,6 +17,7 @@ import androidx.core.graphics.drawable.IconCompat
 import com.nbsp.materialfilepicker.MaterialFilePicker
 import com.nbsp.materialfilepicker.ui.FilePickerActivity
 import lu.kremi151.funkyboy.adapter.MainTilesAdapter
+import lu.kremi151.funkyboy.util.Actions
 import java.util.*
 import java.util.regex.Pattern
 
@@ -134,6 +135,8 @@ class MainActivity: AppCompatActivity() {
         val romTitle = getRomTitle() ?: return
 
         val shortcutIntent = EmulatorActivity.createIntent(applicationContext, romLoadedAtPath).apply {
+            action = Actions.LAUNCH_ROM
+
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
