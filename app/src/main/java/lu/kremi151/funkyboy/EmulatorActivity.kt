@@ -93,7 +93,7 @@ class EmulatorActivity: NativeActivity() {
 
     @Suppress("unused") // Used over JNI
     fun showOptionsActivity(romLoaded: Boolean) {
-        startActivity(MainActivity.newIntent(this, romLoaded))
+        startActivity(MainActivity.newIntent(this, if (romLoaded) intentRomPath else null))
     }
 
     private fun loadBitmapFromResources(resId: Int): Bitmap {

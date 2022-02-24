@@ -27,16 +27,18 @@ class MainActivity: AppCompatActivity() {
         const val REQUEST_CODE_PICK_ROM = 186
         const val REQUEST_CODE_ASK_READ_STORAGE_PERMISSIONS = 187
 
-        private const val INTENT_ROM_LOADED = "romLoaded"
+        private const val INTENT_ROM_LOADED_AT_PATH = "romLoadedAtPath"
         private const val INTENT_HAS_PARENT_ACTIVITY = "hasParentActivity"
 
-        fun newIntent(context: Context, romLoaded: Boolean): Intent {
+        fun newIntent(context: Context, romLoadedAtPath: String?): Intent {
             return Intent(context, MainActivity::class.java).apply {
-                putExtra(INTENT_ROM_LOADED, romLoaded)
+                putExtra(INTENT_ROM_LOADED_AT_PATH, romLoadedAtPath)
                 putExtra(INTENT_HAS_PARENT_ACTIVITY, true)
             }
         }
     }
+
+    private var romLoadedAtPath: String? = null
 
     private external fun getRomTitle(): String?
 
@@ -45,7 +47,9 @@ class MainActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val romLoaded = intent.getBooleanExtra(INTENT_ROM_LOADED, false)
+        romLoadedAtPath = intent.getStringExtra(INTENT_ROM_LOADED_AT_PATH)
+
+        val romLoaded = !romLoadedAtPath.isNullOrEmpty()
         val hasParentActivity = intent.getBooleanExtra(INTENT_HAS_PARENT_ACTIVITY, false)
 
         setContentView(R.layout.activity_main)
@@ -123,11 +127,16 @@ class MainActivity: AppCompatActivity() {
     }
 
     private fun addToHome() {
+        val romLoadedAtPath = romLoadedAtPath
+        if (romLoadedAtPath.isNullOrEmpty()) {
+            return
+        }
         val romTitle = getRomTitle() ?: return
 
-        val shortcutIntent = Intent(applicationContext, MainActivity::class.java)
-        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val shortcutIntent = EmulatorActivity.createIntent(applicationContext, romLoadedAtPath).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
 
         val bmp = Bitmap.createBitmap(getDisplayPixels(), 160, 144, Bitmap.Config.ARGB_8888)
 
